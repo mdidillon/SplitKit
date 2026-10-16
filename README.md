@@ -2,7 +2,7 @@
 
 SplitKit is a native macOS workspace layout engine for SwiftUI. It gives you nested horizontal and vertical splits, draggable dividers, drag-and-drop rearranging, panes you can drag out into their own windows and back, multi-window and multi-monitor layouts, focus mode, and versioned layout saving. **SplitKit Views** is a companion package of reusable pane contents, with one target per view.
 
-> Status: Phase 0 specification approved (Revision 2, 16 Oct 2026, incorporates an external review). Implementation starts with Phase 1: the model plus feasibility spikes. See [Docs/Phase0-Spec.md](Docs/Phase0-Spec.md).
+> Status: Phase 0 specification approved (Revision 3, 16 Oct 2026, ready for Phase 1). Implementation starts with Phase 1: the model plus feasibility spikes. See [Docs/Phase0-Spec.md](Docs/Phase0-Spec.md).
 
 ## Repository layout
 
@@ -20,7 +20,7 @@ Docs/              Specification and design references.
 ## Requirements
 
 - macOS 26 Tahoe or later (no legacy support)
-- Xcode 27.1 or newer, Swift 6 language mode
+- Xcode 27.1 or newer (Swift 6.4), Swift 6 language mode; package manifests use `swift-tools-version: 6.2`
 
 ## First content views
 

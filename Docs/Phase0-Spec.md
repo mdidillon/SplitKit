@@ -1,11 +1,23 @@
 # SplitKit: Phase 0 Specification
 
-**Status: Approved direction — Revision 2 (16 Oct 2026), incorporates external review.**
-Revision 1 was approved on 16 Oct 2026. Revision 2 resolves the clarifications from an external review that Marc accepted. Implementation starts with Phase 1 (§11).
+**Status: Approved — Revision 3 (16 Oct 2026), ready for Phase 1.**
+Revision 1 was approved on 16 Oct 2026. Revisions 2 and 3 resolve two external reviews that Marc accepted. Implementation starts with Phase 1 (§11).
 
 **Goal:** (1) get **SplitKit 100% right**, and (2) validate the spec → prototype process (Grok Bot coordinating Cursor).
 
 ---
+
+## Revision 3 changelog
+
+1. `pendingCloses` moved out of the Codable `Session` into runtime-only `WorkspaceRuntime` state (§5, §6.3).
+2. **Unknown-content recovery** is an explicit `.unavailable` pane placeholder. It keeps the `ContentID`, `ContentType` and serialized state, but nothing is hosted. It offers **Restore** when the registry gains the type and restores automatically on relaunch. It is distinct from genuinely orphaned records, which are dropped (§5, §8).
+3. **Concrete toolchain:** `// swift-tools-version: 6.2` in both manifests, built with Xcode 27.1 / Swift 6.4 in Swift 6 language mode. CI is pinned to the same Xcode (§1).
+4. **3D camera contract** replaces the fixed `.realityViewCameraControls(.orbit)` call: orbit, independent pan, zoom/dolly, reset (pose + target), and a verified mouse/trackpad mapping. Phase 1 Spike B decides between native control modes and custom gestures (§10).
+5. **Atomic save:** the first save creates the file by writing a temp file and moving it into place. Later saves use `replaceItemAt`. A failed write always preserves the previous valid session (§8).
+6. **Failed transactions leave the whole observable app state unchanged** (ownership, windows, pending close, lifecycle callbacks), with new integration tests (§6.2, §13).
+7. **Self-drop is always a no-op** (every edge and centre). Edge of a different pane = move + split; centre of a different pane = swap, or a move if it's empty. A cross-window dock applies the same semantics atomically across both trees (§6.2).
+8. Added a manual usability check for ⌘W / ⇧⌘W / last pane / detached window, with menu labels and prompts (§7.5, §13).
+9. The two Phase 1 spikes are explicit **go/no-go gates** (§11). The traceability checklist was updated (§13.1).
 
 ## Revision 2 changelog
 
@@ -30,7 +42,7 @@ Revision 1 was approved on 16 Oct 2026. Revision 2 resolves the clarifications f
 |---|---|
 | Repo | Public GitHub `mdidillon/SplitKit`, **MIT**. Independent of Larevo, which is not a dependency and is not modified. |
 | Platform | **macOS 26 Tahoe minimum.** No legacy support: no shims, fallbacks or availability branches. |
-| Toolchain | **Xcode 27.1**, Swift 6.4, **Swift 6 language mode**, `swift-tools-version: 6.x` in both packages. CI needs an Xcode 27.1 runner (to verify). |
+| Toolchain | **Xcode 27.1**, Swift 6.4, **Swift 6 language mode**, manifests declare **`// swift-tools-version: 6.2`** literally in both packages. That is the newest tools version we treat as confirmed; 6.4 was not verifiable from public sources, so it is used only if Spike checks show Xcode 27.1 accepts it, via a deviation report. CI uses **the same Xcode 27.1 (Swift 6.4)** on a macOS 26.6+ runner, selected explicitly with `xcode-select`, and the build fails if a different Xcode is active. |
 | Structure | `SplitKit/` and `SplitKitViews/` are separate, extractable Swift packages. `SplitKitTestApp/` is a plain **Xcode project**, used as both the test app and the integration sample. |
 | Views | One product per content view. First contents: **ImageViewer** (display only) and **ModelViewer3D** (glTF/GLB via **GLTFKit2 + RealityKit**; FBX out). |
 | Header | SplitKit owns it. **Focus toggle in the header**, no maximize button. |
@@ -137,22 +149,35 @@ public struct Session: Codable, Equatable, Sendable {
     public var version: Int
     public var windows: [WindowLayout]
     public var contents: [ContentRecord]
-    public var pendingCloses: Set<PaneID>   // runtime only, never encoded
 }
 public struct ContentRecord: Codable, Equatable, Sendable {
     public var id: ContentID; public var type: ContentType
     public var stateVersion: Int; public var state: Data
+    public var availability: Availability = .hosted
+    public enum Availability: String, Codable, Sendable {
+        case hosted        // a live object exists (or will on restore)
+        case unavailable   // type not registered: shown as a recoverable placeholder, never hosted, data retained verbatim
+    }
 }
 
 public enum SessionEngine {
     /// Pure. Returns the new session or throws; never repairs silently.
-    public static func apply(_ t: LayoutTransaction, to s: Session) throws(LayoutError) -> TransactionResult
+    public static func apply(_ t: LayoutTransaction, to s: Session, runtime: WorkspaceRuntime) throws(LayoutError) -> TransactionResult
     public static func validate(_ s: Session) -> [InvariantViolation]          // empty = valid
 }
 public struct TransactionResult: Sendable {
     public var session: Session
+    public var runtime: WorkspaceRuntime
+    public var windowsCreated: [WindowID]      // the coordinator acts on these only after success
+    public var windowsClosed: [WindowID]
     public var released: [ContentID]          // contents whose host must dispose them
     public var normalizations: [Normalization] // documented, e.g. .flattened(SplitID), .collapsed(SplitID)
+}
+
+/// Runtime-only state: never encoded, never part of `Session` equality.
+public struct WorkspaceRuntime: Sendable {
+    public var pendingCloses: Set<PaneID> = []
+    public var activeDrag: DragSessionID? = nil
 }
 
 public enum Migrator {
@@ -172,7 +197,7 @@ public enum DisplayPlacement {
 // Errors (§12)
 public enum LayoutError: Error, Equatable, Sendable {
     case unknownPane(PaneID), unknownSplit(SplitID), unknownWindow(WindowID), unknownContent(ContentID)
-    case contentAlreadyHosted(ContentID), centerDropOnSelf, centerInsertIntoOccupiedPane
+    case contentAlreadyHosted(ContentID), centerInsertIntoOccupiedPane
     case invalidFractions(reason: String), indexOutOfRange
     case paneClosePending(PaneID), noCloseInProgress(PaneID)
     case wouldEmptyDetachedWindowIllegally
@@ -243,6 +268,8 @@ public enum RegistryError: Error, Sendable {
     public func restoreOrOpenDefault() -> RestoreReport                      // .splitKit mode
     public func perform(_ command: SplitKitCommand) async throws(LayoutError)
     public func addContent(_ type: ContentType, url: URL?, into: PaneID?) async throws(RegistryError)
+    public func restoreUnavailable(_ id: ContentID) throws(RegistryError)    // placeholder ▸ Restore
+    public private(set) var runtime: WorkspaceRuntime
     public func saveNow() async throws(PersistenceError)
     public var lastSaveError: PersistenceError? { get }
 }
@@ -293,20 +320,27 @@ public struct SplitKitTokens: Sendable { public var metrics: Metrics; public var
 |---|---|---|---|---|
 | **Edge insert** (`insert`, edge ≠ center) | Target pane exists; content is not hosted | The target becomes a split (or joins the parent split if it's the same axis, with flattening) and the new pane gets half the target's fraction | The new content is hosted; nothing is released | `unknownPane`, `contentAlreadyHosted` |
 | **Center insert** | Target pane is **empty** | The content goes into the empty pane | Hosted | `centerInsertIntoOccupiedPane` (to replace, use the content picker: insert new, then a two-stage close of the old) |
-| **Edge move** (`move`, edge ≠ center) | Content hosted in source pane S ≠ target T, or S == T with a different edge only if S's parent has other children | S is removed (collapse/flatten), then an edge insert at T | Same `ContentID`; no release | `unknownContent`, `paneClosePending`; moving onto its own pane with any edge when it's the only pane → no-op returning the unchanged session |
-| **Center move = swap** | S ≠ T; both exist | If T has content, **S and T exchange contents**. If T is empty, the content moves and S becomes empty (an empty S in a detached window that would leave it with no content → the window closes after commit) | Both IDs keep their state; **nothing is released or closed** | `centerDropOnSelf`, `paneClosePending` |
+| **Self-drop** (`move` with T == S, any edge **or** centre) | none | **Always a no-op**: the unchanged session, no normalisations, no callbacks, no snapshot | Unchanged | none (not an error) |
+| **Edge move** (`move`, edge ≠ center) | Content hosted in source pane S ≠ target T | S is removed (collapse/flatten), then an edge insert at T (move + split) | Same `ContentID`; no release | `unknownContent`, `paneClosePending` |
+| **Center move = swap** | S ≠ T; both exist | If T has content, **S and T exchange contents**. If T is empty, the content moves and S becomes empty (an empty S in a detached window that would leave it with no content → the window closes after commit) | Both IDs keep their state; **nothing is released or closed** | `paneClosePending` (self is handled by the self-drop row) |
 | **Reorder** | Valid split and indices | Children and fractions are permuted together | Unchanged | `indexOutOfRange` |
 | **Resize** | Valid split and fractions (§6.1.3) | Fractions are replaced | Unchanged | `invalidFractions` |
 | **Detach** | Pane exists, detach is enabled | The pane is removed from its window (collapse); a new `.detached` window holds `.pane(newPaneID, sameContent)` | Same `ContentID` | `paneClosePending`; detaching the only pane of a main window is allowed (the main window shows its empty state) |
-| **Dock** | A move or insert across windows | As for move; the source detached window closes if it becomes empty | Same `ContentID` | As for move |
+| **Dock** (cross-window move) | S in window A, T in window B | **Exactly the same semantics as a move** (edge = move + split, centre = swap or move into empty), applied **atomically across both trees in one transaction**. If A is detached and becomes empty, it's listed in `windowsClosed` | Same `ContentID` | As for move; on failure neither tree changes |
 
 **Why swap for a centre drop:** it's the only centre behaviour that is **lossless and synchronous**. It never needs a `shouldClose` confirmation in the middle of a drag, never destroys state by accident, and is undone by dropping again. Replacing content stays an explicit, confirmable action in the content picker. Rejecting the drop entirely would make the centre target useless.
 
-Every transaction is **all-or-nothing**: on throw, the session is unchanged. The model never "fixes" bad input; it either throws or returns a documented normalisation.
+Every transaction is **all-or-nothing**. On throw, the **entire observable app state is unchanged**:
+- the `Session` (byte-identical when encoded) and the `WorkspaceRuntime`, including pending closes;
+- content ownership: no content is created, released or re-hosted, and no `willRelease()`/`shouldClose()` is called;
+- windows: no `NSWindow` is created, shown, moved or closed. The coordinator applies `windowsCreated`/`windowsClosed` only after a successful result;
+- no snapshot or autosave is triggered.
+
+The engine computes everything purely first; side effects happen only after success, in a fixed order (create windows → re-host → release → close windows → snapshot). The model never "fixes" bad input; it either throws or returns a documented normalisation.
 
 ### 6.3 Two-stage close
 
-1. `beginClose(P)` marks P **pending** (it's in `pendingCloses`; the tree is unchanged; the header shows a subtle "closing" state). SplitKit then calls `await content.shouldClose()`. The content may show a sheet; it must not mutate the layout.
+1. `beginClose(P)` marks P **pending** (it's in `WorkspaceRuntime.pendingCloses`, which is runtime-only and never persisted; the tree is unchanged; the header shows a subtle "closing" state). SplitKit then calls `await content.shouldClose()`. The content may show a sheet; it must not mutate the layout.
 2. **Accepted →** `commitClose(P)`: the pane is removed (collapse/flatten), and `released = [contentID]`. The host calls `willRelease()`, then drops the object, and a snapshot is taken.
    **Declined →** `cancelClose(P)`: the pending flag is cleared, and **everything else is untouched**.
 3. **While pending:** any transaction that touches P (move, swap, detach, a resize of its parent, a second close) throws `paneClosePending`. UI drags from P are disabled. Transactions elsewhere proceed normally, because P's `PaneID` is stable.
@@ -381,6 +415,15 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
 | Close Pane | ⌘W (closes the pane; the window closes only when it has no panes) |
 | Close Window | ⇧⌘W |
 
+**Close semantics and labels:**
+- **⌘W, *Pane ▸ Close Pane*:** closes the active pane.
+  - In a detached window with one pane, the menu label reads *Close Pane and Window*.
+  - On the last pane of a main window, it reads *Close Pane* and leaves the empty state.
+- **⇧⌘W, *Window ▸ Close Window*:** closes the whole window.
+  - If 2 or more contents ask to confirm, one prompt lists them: "Close window with N panes?" with *Close All* and *Cancel* buttons.
+  - A detached window prompt also offers *Dock Back Instead*.
+- **⌘W in an empty main window** closes the window. The app stays alive.
+
 **Collision testing:** a unit test asserts there are no duplicates inside `ShortcutMap.default` or against the standard macOS menu shortcuts SplitKit doesn't own. A host-supplied map is validated at startup; conflicts are reported (as a recoverable error) and not silently overridden. Content shortcuts are only active while their pane is active, and a conflict with a SplitKit shortcut makes the content's shortcut lose, with a debug warning.
 
 ## 8. Persistence
@@ -388,11 +431,19 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
 - **Format:** JSON `Session` with `version`. `Migrator` applies stepwise migrations and then `validate`.
 - **Validation before restore:** duplicate `ContentID`, a hosted ID without a record, an unknown `ContentType`, bad fractions, single-child splits, same-axis nesting, an empty detached window, dangling focus.
   - **Fatal for the file** (e.g. duplicate IDs, bad fractions, structure): restore **does not proceed** with a partially repaired tree. SplitKit opens the default layout, **keeps the original as `session.invalid-<timestamp>.json`**, and returns `RestoreReport` with the violations.
-  - **Recoverable** (documented, reported): an unknown content type becomes an empty pane with a "Content type ‹x› unavailable" placeholder, and its record is **retained** for a later restore. An orphan record is dropped. Dangling focus is set to nil. A content whose `init(restoring:)` throws becomes an empty placeholder pane, with the record retained.
+  - **Recoverable: unavailable content.** A pane that references a record whose `ContentType` isn't registered keeps its `ContentID` and becomes an **unavailable placeholder**. The record is marked `.unavailable` and its `type`, `stateVersion` and `state` are kept **verbatim**. Nothing is hosted.
+    - The placeholder shows the icon, "‹Type› isn't available in this app", and the actions **Restore** (enabled once the registry has the type) and **Close** (removes the pane and its record after confirmation).
+    - When the type gets registered at runtime, the placeholder's Restore becomes active. On the next launch, restore is **automatic**.
+    - The placeholder is saved back unchanged, so data is never lost across launches.
+  - **Orphaned records** (no pane in any window references them) are **dropped** and listed in `RestoreReport`. Dangling focus is set to nil. A content whose `init(restoring:)` throws becomes the same unavailable placeholder (reason: "couldn't restore"), with the record retained and Restore offering a retry.
   - **Future version** (`version > current`): the file is never overwritten; SplitKit opens the default layout read-from-scratch and reports `unsupportedFutureVersion`.
-- **Atomic writes:** encode to a temp file in the same directory, then `replaceItemAt`. A custom `SessionStore` must provide equivalent atomicity.
+- **Atomic writes:** encode into a temp file in the same directory and fsync it.
+  - **First save** (no file yet): create the directory if needed, then atomically move the temp file into place (`FileManager.moveItem`, which is a rename on the same volume).
+  - **Later saves:** `FileManager.replaceItemAt(_:withItemAt:)`.
+  - **Any failure** (encode, write, move or replace) leaves the previous valid session file untouched and deletes the temp file.
+  - A custom `SessionStore` must provide equivalent guarantees, and a conformance test suite ships for that.
 - **Consistent snapshot:** on the main actor, the tree and **all** `encodeState()` results are captured in one pass (no awaits in between), then encoded and written off the main actor. Contents that throw in `encodeState` keep their last good state, and the error is recorded.
-- **Snapshot points:** after every committed structural transaction (insert, move, swap, detach, dock, commitClose) and after resize ends (mouse-up), debounced at `autosaveDebounce`. Snapshots are also taken on window close and immediately on app quit (`applicationShouldTerminate` waits for at most 2 s, then quits). There are no snapshots mid-drag or while a close is pending (pending panes are saved as open).
+- **Snapshot points:** after every committed structural transaction (insert, move, swap, detach, dock, commitClose) and after resize ends (mouse-up), debounced at `autosaveDebounce`. Snapshots are also taken on window close and immediately on app quit (`applicationShouldTerminate` waits for at most 2 s, then quits). There are no snapshots mid-drag. While a close is pending, the pane is saved as open, because pending state is runtime-only.
 - **Pending and failed saves:** only one write is in flight; newer snapshots replace a queued one. A failure sets `lastSaveError`, retries on the next snapshot point, and never deletes the previous good file.
 - **Persistence `.disabled`:** no reads or writes; `restoreOrOpenDefault` opens the default layout.
 
@@ -418,11 +469,22 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
 | Product | Scope | Stack |
 |---|---|---|
 | **ImageViewer** | Display only: aspect-fit, no zoom/pan/rotate. It opens via the picker (file panel) or a dropped image. Unreadable file → `ContentError.unreadable`, shown in the pane. | SwiftUI `Image(nsImage:)`; no dependencies |
-| **ModelViewer3D** | **glTF + GLB only, FBX out.** Orbit, pan and zoom via standard trackpad and mouse gestures; *Reset Camera* | **GLTFKit2 → RealityKit**, in `RealityView` with `realityViewCameraControls(.orbit)` and `cameraTarget` |
+| **ModelViewer3D** | **glTF + GLB only, FBX out.** The camera contract is below. | **GLTFKit2 → RealityKit**, in `RealityView`. The camera implementation is decided by Spike B |
 
 **Why RealityKit:** SceneKit is soft-deprecated (WWDC25; maintenance only), which conflicts with the macOS 26 current-APIs rule. RealityKit can't load glTF natively, so GLTFKit2 (MIT, active, RealityKit converter reworked in 2026) is required.
 
-**Phase 1 3D spike (standalone, no SplitKit):** verify the exact GLTFKit2 → RealityKit conversion API on Xcode 27.1; orbit, pan and zoom on a trackpad and a mouse; reset (camera pose + `cameraTarget`); `.gltf` with external `.bin` and textures; GLB with embedded textures; a load-time error path.
+**Camera contract (required, whatever the implementation):**
+
+| Action | Trackpad | Mouse |
+|---|---|---|
+| Orbit around target | One-finger drag (click-drag) | Left-drag |
+| Pan (move target and camera together, independent of orbit) | Two-finger scroll | ⇧ + left-drag, or middle-drag |
+| Zoom/dolly toward target (never through it; clamped near/far) | Pinch | Scroll wheel |
+| Reset | Toolbar *Reset Camera* / ⌘0: camera pose **and** target return to the framed default (bounding sphere fit) | same |
+
+The mapping is verified by hand on Marc's MacBook trackpad and a mouse, with results recorded. RealityKit's built-in `realityViewCameraControls` modes (e.g. `.orbit`, `.pan`, `.dolly`) are a candidate, **not a prescription**. Spike B decides whether a combination of native modes meets the contract or whether custom gesture handling (setting a camera entity's transform and target) is needed.
+
+**Phase 1 3D spike (standalone, no SplitKit):** verify the exact GLTFKit2 → RealityKit conversion API on Xcode 27.1; the full camera contract above on a trackpad and a mouse (native modes vs custom gestures); reset (pose + target); `.gltf` with external `.bin` and textures; GLB with embedded textures; a load-time error path.
 
 **Sample corpus and criteria** (Khronos glTF-Sample-Assets subset plus 2 Artifex exports, committed under `SplitKitViews/Tests/Fixtures` or fetched by a script with licences recorded):
 
@@ -445,7 +507,9 @@ If a required item fails, Marc gets a deviation report. There is no silent switc
 | Phase | Deliverables | Acceptance criteria |
 |---|---|---|
 | **P0 Spec lock** | This Revision 2 + traceability matrix skeleton (`Docs/Traceability.md`) | Marc approves. Every requirement has an ID. |
-| **P1 Model + feasibility spikes** | Repo skeleton (2 packages, Xcode app, CI); full `SplitKitModel` (tree, transactions, validate, migrations v1, DisplayPlacement); **Spike A**: cross-window live-content transfer (AppKit drag session; state, first responder/focus handover, cancel and failed drops, cleanup, single host); **Spike B**: RealityKit/GLTFKit2 standalone (§10) | Model coverage ≥ 90% plus property tests green. Spike A demo: a counter and a live 3D view move between two windows with state and responder intact, cancelled drops leave no residue, and there's never a double host (asserted). Spike B meets §10 spike items. Each spike has a written ADR with go / adjust. |
+| **P1 Model + feasibility spikes** | Repo skeleton (2 packages, Xcode app, CI); full `SplitKitModel` (tree, transactions, validate, migrations v1, DisplayPlacement); **Spike A**: cross-window live-content transfer (AppKit drag session; state, first responder/focus handover, cancel and failed drops, cleanup, single host); **Spike B**: RealityKit/GLTFKit2 standalone (§10) | Model coverage ≥ 90% plus property tests green. Spike A demo: a counter and a live 3D view move between two windows with state and responder intact, cancelled drops leave no residue, and there's never a double host (asserted). Spike B meets §10 spike items. Each spike ends in a written ADR with an explicit **go/no-go gate**:
+- **Gate A (live transfer):** go if every criterion passes. No-go → Marc decides between (a) commands-only detach/dock in v1, or (b) a redesign. P2 does not start until he decides.
+- **Gate B (3D):** go if the camera contract and the required §10 corpus rows pass. No-go → a deviation report with options. ModelViewer3D work is paused until Marc decides; SplitKit work continues. |
 | **P2 Usable split UI** | Rendering, dividers with minimum sizes, header (§7.1), content picker, empty state, two-stage close, focus mode, menus and shortcuts, `.glass` + `.plain` with tokens, persistence with atomic autosave, dummy contents (colour, counter) | A 2×2 and a 3-level mixed tree can be built by mouse and by keyboard only. Close confirmation can be declined, leaving no change. The last pane leaves the empty state and the app stays running. Relaunch restores everything; an invalid file → default layout + `.invalid` file kept. Glass/accessibility example verified. |
 | **P3 Detach, dock, displays** | Drag-out threshold, ghost window, dock targets, Detach / Move to Window / Dock Back, window close rules, placement with no drift, host-managed mode sample | The counter state survives every path. The simulated-display matrix passes. Single-screen manual checklist passes. The host-mode sample target works with persistence disabled. |
 | **P4 Real contents** | `ImageViewer`, `ModelViewer3D` products | The §10 corpus criteria are met. Each product works standalone, docked and detached. **A clean consumer test per product** (a fresh package depending on only that product builds and runs). |
@@ -460,12 +524,39 @@ If a required item fails, Marc gets a deviation report. There is no silent switc
 ## 13. Test strategy and process
 
 - **Unit:** every row of §6.2 including failure cases; flattening and normalisation; minimum-size compression; two-stage close (accept, decline, concurrent operations → `paneClosePending`, window close with one decline); migrations (v0 fixture → v1, a future version, a corrupt file, each invariant violation); snapshot consistency; `DisplayPlacement` over simulated configurations (adding or removing a display, rearranging including negative coordinates, resolution and scale changes, main display switch, mixed Retina, a window spanning two displays, a display smaller than the minimum size, re-placement not changing `intendedFrame`); shortcut collisions; registry errors.
-- **Property/invariant tests** (random transaction sequences, ≥ 10,000 per CI run with a fixed seed recorded): the tree stays valid, ownership is unique, fractions are finite and positive and sum to 1, identities are preserved, a thrown transaction leaves the session byte-identical, and an encode → decode round trip is identity.
+- **Property/invariant tests** (random transaction sequences, ≥ 10,000 per CI run with a fixed seed recorded): the tree stays valid, ownership is unique, fractions are finite and positive and sum to 1, identities are preserved, a thrown transaction leaves the session byte-identical (and the runtime equal), a self-drop is always identity, and an encode → decode round trip is identity.
 - **Negative tests:** every `LayoutError`, `RegistryError` and `PersistenceError` case has at least one test.
 - **Snapshot (UI):** headers at wide, narrow and minimum widths × light/dark/increased contrast × `.glass`/`.plain`; the overflow order.
 - **Manual (Marc's single MacBook screen), with a checklist in `Docs/Manual/`:** drag feel and threshold, cancel by Esc, cross-window dock, VoiceOver and keyboard-only operation, trackpad vs mouse in 3D, a resolution change in System Settings, a hand-edited session with a missing display, full screen + focus mode. **Remaining risk:** real hot-plug, multi-display Spaces and full-screen interplay are untested without a second display.
+- **Manual usability check (close semantics):** with 3 panes in a main window plus 1 detached window, run each of: ⌘W on a pane, ⌘W on the last main-window pane, ⌘W in the detached window, ⇧⌘W on each window, ⌘W in the empty main window, and the red close button. For each, record whether the result matched the menu label, whether Marc predicted it before pressing, and whether the prompt text was clear. Any mismatch is a P2 bug.
+- **Failed-transaction integration tests:**
+  - A failed detach (e.g. `paneClosePending`) creates **no** window, empty or not.
+  - A failed dock releases **no** content and leaves both windows unchanged.
+  - A failed close commit calls no `willRelease()`.
+  - A failed insert creates no content object.
+  - A self-drop on every edge and the centre is a no-op with no snapshot.
+  - In each case, the encoded session and runtime are compared before and after.
 - **Clean build:** CI and every report start from a fresh checkout (`git clone`, then `xcodebuild -project SplitKitTestApp/SplitKitTestApp.xcodeproj -scheme SplitKitTestApp build`, `swift test` in each package).
 - **Traceability matrix** (`Docs/Traceability.md`): requirement ID → spec section → code location → automated test or manual check → status. It is updated by every PR.
+
+### 13.1 Traceability checklist (seed rows for `Docs/Traceability.md`)
+
+| ID | Requirement | Spec | Verification |
+|---|---|---|---|
+| R-TREE | Tree invariants, flattening, fractions | §6.1 | unit + property |
+| R-TXN | Transactions incl. self-drop no-op, swap, cross-window dock atomicity | §6.2 | unit + property |
+| R-FAIL | Failed op leaves all observable state unchanged | §6.2 | integration (failed detach/dock/close/insert) |
+| R-CLOSE | Two-stage close; runtime-only pending | §6.3 | unit + integration |
+| R-STATE | State ownership / single host | §6.4 | counter test, debug assertion |
+| R-HDR | Header contents, focus toggle, overflow | §7.1, §7.4 | snapshot + manual |
+| R-THEME | `.glass`/`.plain`, tokens, accessibility | §7.2 | snapshot + P2 example |
+| R-FOCUS | activePane / focusModePane rules | §7.3 | unit + manual |
+| R-KEYS | Shortcut table, collisions, close-semantics usability | §7.5 | unit + manual usability check |
+| R-PERSIST | Validation, unavailable placeholders, orphan drop, atomic first and later save | §8 | unit + fault-injection |
+| R-WIN | Placement fallback, no drift, ownership modes | §9 | simulated displays + manual |
+| R-3D | Camera contract, corpus | §10 | Spike B gate + manual |
+| R-PROD | One product per view, clean consumer build | §2, §11 | per-product CI job |
+| R-TOOL | tools-version 6.2, Xcode 27.1 pinned in CI | §1 | CI check |
 - **Reporting** (every Cursor PR, verified by Grok Bot): the exact commands, exit codes, test counts (pass/fail/skip), coverage, known gaps, and the manual checks Marc needs to run. **Any deviation** from this spec gets a written deviation report and needs Marc's approval before merge. Nothing is claimed as working without evidence.
 
 ## 14. Risks
