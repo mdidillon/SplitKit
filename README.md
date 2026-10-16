@@ -2,13 +2,17 @@
 
 SplitKit is a native macOS workspace layout engine for SwiftUI. It gives you nested horizontal and vertical splits, draggable dividers, drag-and-drop rearranging, panes you can drag out into their own windows and back, multi-window and multi-monitor layouts, focus mode, and versioned layout saving. **SplitKit Views** is a companion package of reusable pane contents, with one target per view.
 
-> Status: Phase 0 (specification) is approved. Implementation starts with Phase 1. See [Docs/Phase0-Spec.md](Docs/Phase0-Spec.md).
+> Status: Phase 0 specification approved (Revision 2, 16 Oct 2026, incorporates an external review). Implementation starts with Phase 1: the model plus feasibility spikes. See [Docs/Phase0-Spec.md](Docs/Phase0-Spec.md).
 
 ## Repository layout
 
 ```
-SplitKit/          Swift package: the layout engine (model, SwiftUI rendering, AppKit windows). Renders no content.
+SplitKit/          Swift package: the layout engine. Renders no content. Products:
+                   SplitKitModel   - pure model: tree, transactions, persistence, display placement
+                   SplitKitContent - content contract (PaneContent, PaneToolbarItem, ContentRegistry)
+                   SplitKit        - SwiftUI workspace, chrome, styles; includes the AppKit window coordinator
 SplitKitViews/     Swift package: pane contents, one product per view (ImageViewer, ModelViewer3D, ...).
+                   Each depends only on SplitKitContent, never on the SplitKit UI.
 SplitKitTestApp/   Xcode project: test app and integration sample.
 Docs/              Specification and design references.
 ```
@@ -33,7 +37,7 @@ Deferred: terminal, code editor, browser, file browser, GitHub view.
 2. Open `SplitKitTestApp/SplitKitTestApp.xcodeproj` in Xcode 27.1+.
 3. Run the `SplitKitTestApp` scheme on macOS 26.
 
-To use SplitKit in your own app, add the `SplitKit` package (and any `SplitKitViews` products you need) through Swift Package Manager. Then register your contents and host a workspace, as described in the spec's host-integration section.
+To use SplitKit in your own app, add the `SplitKit` package (and any `SplitKitViews` products you need) through Swift Package Manager. Create a `ContentRegistry`, register your contents, and create a `SplitKitWorkspace`. Then either let SplitKit manage windows, or embed `SplitKitView` in your own. See spec §5 (API) and §9 (window ownership).
 
 ## Licence
 
