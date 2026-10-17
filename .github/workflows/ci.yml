@@ -10,18 +10,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select newest Xcode 27.x (R-TOOL; deviation, see PR 1)
+      - name: Select Xcode 27.x, preferring 27.1 (R-TOOL; deviation, see PR 1)
         run: |
           # Pin is Xcode 27.x on the xcode-27 preview image until 27.1 is available there
           # (actions/runner-images#14850). Spec §1 asks for 27.1; see the deviation note in PR 1.
-          best=""; bestv=""
+          # Preference: exactly 27.1 (incl. its RC) > newest non-beta 27.x > newest 27.x beta.
+          best=""; bestv=""; bestrank=9
           for app in /Applications/Xcode*.app; do
             [ -x "$app/Contents/Developer/usr/bin/xcodebuild" ] || continue
             [ -L "$app" ] && continue
             v=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$app/Contents/Info.plist" 2>/dev/null) || continue
             echo "found $app -> $v"
             case "$v" in 27|27.*) ;; *) continue ;; esac
-            if [ -z "$bestv" ] || [ "$(printf '%s\n%s\n' "$bestv" "$v" | sort -V | tail -n 1)" = "$v" ]; then best="$app"; bestv="$v"; fi
+            case "$v" in 27.1|27.1.*) rank=0 ;; *) case "$app" in *[Bb]eta*) rank=2 ;; *) rank=1 ;; esac ;; esac
+            if [ "$rank" -lt "$bestrank" ] || { [ "$rank" -eq "$bestrank" ] && [ "$(printf '%s\n%s\n' "$bestv" "$v" | sort -V | tail -n 1)" = "$v" ]; }; then
+              best="$app"; bestv="$v"; bestrank=$rank
+            fi
           done
           if [ -z "$best" ]; then echo "::error::No Xcode 27.x found on runner"; exit 1; fi
           sudo xcode-select -s "$best/Contents/Developer"
