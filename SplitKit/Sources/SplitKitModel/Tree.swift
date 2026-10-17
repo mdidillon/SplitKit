@@ -28,8 +28,8 @@ extension LayoutNode {
         return .split(id: id, axis: axis, children: children, fractions: fractions)
     }
 
-    /// Leaves in depth-first order.
-    var leaves: [(pane: PaneID, content: ContentID?)] {
+    /// Leaves in depth-first order. `package` so the SplitKit UI target finds panes without its own tree walk.
+    package var leaves: [(pane: PaneID, content: ContentID?)] {
         switch self {
         case let .pane(id, content): [(id, content)]
         case let .split(_, _, children, _): children.flatMap(\.leaves)

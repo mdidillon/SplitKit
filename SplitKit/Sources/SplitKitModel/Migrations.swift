@@ -22,8 +22,7 @@ enum V0 {
     static let mainWindowID = WindowID(raw: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
 
     /// Centred on the main display by §9 (`relativeOrigin == nil`).
-    static let placement = SavedPlacement(intendedFrame: CGRect(x: 0, y: 0, width: 1200, height: 800),
-                                          displayID: nil, relativeOrigin: nil)
+    static let placement = SavedPlacement.defaultMainWindow
 
     /// v0 → v1: wraps the tree into one `.main` window, no focus, every record `.hosted`.
     static func migrateToV1(_ data: Data) throws(PersistenceError) -> Data {

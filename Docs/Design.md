@@ -133,7 +133,7 @@ The element order and behaviour are in spec §7.1 and the layout and overflow ru
 | **Dragged source** | Header and content at the dragged-source opacity (§3) | same |
 | **Pending close** | The close button is replaced by a `ProgressView().controlSize(.small)`; the other header controls are disabled; content is not dimmed (it may show a sheet) | same |
 | **Empty pane** | Header shows "Add Content" as the title (spec §7.1); body shows `plus.rectangle.on.rectangle` at the empty-state size, `.secondary`, a title and the Add Content button (§4) | same with §4.2 button |
-| **Empty window** (no panes) | Same composition as the empty pane, centred in the window | same |
+| **Empty window** (no panes) | Same composition as the empty pane, centred in the window; title "No Content" **[check]** | same |
 | **Unavailable placeholder** | The type's symbol (or `questionmark.square.dashed` when unknown), the message from spec §8 in `.secondary`, **Restore** (`.glass`) and **Close** buttons | same with `.bordered` buttons |
 | **Focus mode** | The focused card fills the window; no extra decoration besides the toggled focus symbol | same |
 
@@ -180,5 +180,6 @@ Checked on the Phase 2 example screen and the first chrome build, in light and d
 8. `.glass` window background: standard, no custom window material
 9. Empty state: 28 pt symbol, `.title3` title, 8 pt spacing, `.glassProminent` Add button
 10. Drag handle symbol `line.3.horizontal`
+13. Empty window title copy "No Content"
 11. Header control labels "Focus Pane" and "Close Pane"
 12. `.glass` header controls: borderless buttons with token-driven interactive `glassEffect` capsules in one `GlassEffectContainer`

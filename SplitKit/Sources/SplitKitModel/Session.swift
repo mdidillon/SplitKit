@@ -20,6 +20,13 @@ public struct SavedPlacement: Codable, Equatable, Sendable {
     }
 }
 
+extension SavedPlacement {
+    /// 1200 × 800 pt, centred on the main display by §9 (`relativeOrigin == nil`): the v0 → v1 migration
+    /// placement (§8), also used for the main window of the default layout.
+    package static let defaultMainWindow = SavedPlacement(intendedFrame: CGRect(x: 0, y: 0, width: 1200, height: 800),
+                                                          displayID: nil, relativeOrigin: nil)
+}
+
 public struct WindowLayout: Codable, Equatable, Sendable {
     public enum Kind: String, Codable, Sendable { case main, detached }
     public var id: WindowID

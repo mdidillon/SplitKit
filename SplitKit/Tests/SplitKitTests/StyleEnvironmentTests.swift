@@ -106,15 +106,6 @@ private func allHeaderStates() -> [PaneHeaderConfiguration] {
     ]
 }
 
-/// Hosts `view` in an `NSHostingView` and lays it out, so SwiftUI evaluates its body.
-@MainActor @discardableResult
-private func host(_ view: some View) -> NSHostingView<AnyView> {
-    let hosting = NSHostingView(rootView: AnyView(view))
-    hosting.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
-    hosting.layoutSubtreeIfNeeded()
-    return hosting
-}
-
 /// The environment a view sees after `modify` applies modifiers above it.
 @MainActor
 private func capturedEnvironment(_ modify: (EnvironmentProbe) -> some View) throws -> EnvironmentValues {
