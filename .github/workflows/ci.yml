@@ -10,10 +10,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 27.x, preferring 27.1 (R-TOOL; deviation, see PR 1)
+      - name: Select Xcode 27.x, preferring 27.1 (R-TOOL; approved deviation, spec §1)
         run: |
           # Pin is Xcode 27.x on the xcode-27 preview image until 27.1 is available there
-          # (actions/runner-images#14850). Spec §1 asks for 27.1; see the deviation note in PR 1.
+          # (actions/runner-images#14850). Preferring 27.1 over newer betas is an approved deviation (spec §1, §11.1).
           # Preference: exactly 27.1 (incl. its RC) > newest non-beta 27.x > newest 27.x beta.
           best=""; bestv=""; bestrank=9
           for app in /Applications/Xcode*.app; do

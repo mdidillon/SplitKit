@@ -52,7 +52,7 @@ Traceability (§13.1): R-TREE, R-TXN, R-CLOSE, R-PERSIST, R-WIN and R-TOOL rows 
 7. **State ownership (§6.4)** split into content object, SwiftUI view-local and serialisable state, and proven with a counter test.
 8. **Focus model (§7.3):** two explicit fields, `activePane` (keyboard/selection) and `focusModePane` (fill-window). Behaviour on resize, display change, native full screen and persistence is defined.
 9. **Windows (§9):** deterministic placement fallback (reachability wins; size is clamped). The saved frame, actual frame and re-persisted frame are kept separate to prevent drift. Window ownership is defined for SplitKit-managed and host-managed modes.
-10. **Theming scoped down:** `.glass` and `.plain` ship first; `.compact` is later. A small, stable token set. Custom toolbar views are optional in milestone 1, and the macOS 26 glass APIs and accessibility are verified with a small example (§7.2).
+10. **Theming scoped down:** `.glass` and `.plain` ship first; `.compact` is later. A small, stable token set. Custom toolbar views are optional in milestone 1, and the macOS 26 glass APIs and accessibility are verified with a small example (§7.2). *(The visual design now lives only in `Docs/Design.md`.)*
 11. **Phases reordered (§11):** P1 model + feasibility spikes (cross-window live-content transfer, RealityKit/GLTFKit2), P2 usable split UI, P3 detach/dock/displays, P4 real contents, P5 optional spatial.
 12. **3D spike and corpus** with required vs optional glTF features and measurable criteria (§10). Added a public error model, a default shortcut table with collision tests, per-product clean consumer tests, a traceability matrix and reporting rules (§12–13).
 
@@ -65,11 +65,11 @@ Traceability (§13.1): R-TREE, R-TXN, R-CLOSE, R-PERSIST, R-WIN and R-TOOL rows 
 | Repo | Public GitHub `mdidillon/SplitKit`, **MIT**. Independent of Larevo, which is not a dependency and is not modified. |
 | Platform | **macOS 26 Tahoe minimum** (deployment target stays macOS 26). No legacy support: no shims, fallbacks or availability branches. Marc's development Mac runs **macOS 27.0.1**, so local runs exercise a newer OS than the target; CI (below) runs whatever macOS the `xcode-27` image ships, and every report records both OS versions. Any behaviour seen only on macOS 27 is recorded as a known gap, never worked around with availability branches. |
 | Toolchain | **Xcode 27.1**, Swift 6.4, **Swift 6 language mode** for local development. Manifests declare **`// swift-tools-version: 6.2`** literally in both packages; there is **no 6.4 tools-version path in P1** (raising it later is a deviation report). |
-| CI | GitHub-hosted **`runs-on: xcode-27`** (the Xcode 27 preview image). Hosted images did not offer Xcode 27.1 when PR 1 was opened (tracked in `actions/runner-images#14850`), so CI **accepts any Xcode 27.x**: it selects the newest `/Applications/Xcode*.app` whose version is `27` or `27.*` with `xcode-select`, prints `xcodebuild -version` and `swift --version` into the job summary, and fails unless `xcodebuild -version \| head -n 1` matches `^Xcode 27(\.\|$)`. Once a final Xcode 27.1 is on the image, the assertion tightens to `^Xcode 27\.1(\.\|$)` in a one-line PR. **Fallback:** if the `xcode-27` image disappears or no 27.x is found, CI goes red and Marc decides (e.g. a self-hosted runner on his Mac) via a deviation report; there is no silent toolchain change. |
+| CI | GitHub-hosted **`runs-on: xcode-27`** (the Xcode 27 preview image). Hosted images did not offer Xcode 27.1 when PR 1 was opened (tracked in `actions/runner-images#14850`), so CI **accepts any Xcode 27.x**: it selects a `/Applications/Xcode*.app` whose version is `27` or `27.*` with `xcode-select`, preferring exactly 27.1 (including its RC) over the newest non-beta 27.x over the newest 27.x beta (*deviation from "newest", approved by Marc 17 Oct 2026*), prints `xcodebuild -version` and `swift --version` into the job summary, and fails unless `xcodebuild -version \| head -n 1` matches `^Xcode 27(\.\|$)`. Once a final Xcode 27.1 is on the image, the assertion tightens to `^Xcode 27\.1(\.\|$)` in a one-line PR. **Fallback:** if the `xcode-27` image disappears or no 27.x is found, CI goes red and Marc decides (e.g. a self-hosted runner on his Mac) via a deviation report; there is no silent toolchain change. |
 | Structure | `SplitKit/` and `SplitKitViews/` are separate, extractable Swift packages. `SplitKitTestApp/` is a plain **Xcode project**, used as both the test app and the integration sample. |
 | Views | One product per content view. First contents: **ImageViewer** (display only) and **ModelViewer3D** (glTF/GLB via **GLTFKit2 + RealityKit**; FBX out). |
 | Header | SplitKit owns it. **Focus toggle in the header**, no maximize button. |
-| Look | **Liquid Glass default** using native SwiftUI glass APIs and materials, plus environment design tokens. The Larevo screenshot (`Docs/larevo-glass-reference.png`) is a **reference, not a clone**. |
+| Look | Defined only in **`Docs/Design.md`**, the single source of truth for visual design. This spec does not redefine design elements. |
 | Lifecycle | Closing the last pane never quits the app (empty state with an Add button and a menu command). |
 | Monitors | Required. Marc tests on a single MacBook screen, so placement is a pure model tested over simulated displays (§9). |
 
@@ -93,7 +93,7 @@ SplitKit/                        (repo root)
 ├─ Spikes/                       Phase 1 throwaway code, never a dependency of any package
 │  ├─ SpikeA-LiveTransfer/       Xcode project: two windows, AppKit drag session (may use local SplitKit packages)
 │  └─ SpikeB-RealityKit/         Xcode project: GLTFKit2 + RealityKit only, no SplitKit (§10)
-├─ Docs/                         Specification.md, Traceability.md, SpikeA-checklist.md, SpikeB-checklist.md, larevo-glass-reference.png (flat)
+├─ Docs/                         Specification.md, Design.md, Traceability.md, SpikeA-checklist.md, SpikeB-checklist.md, larevo-glass-reference.png (flat)
 ├─ CLAUDE.md                     working rules for Claude (summarises §1, §3, §13; the spec wins on conflict)
 └─ .github/workflows/ci.yml
 ```
@@ -253,6 +253,7 @@ public struct SavedPlacement: Codable, Equatable, Sendable {
 }
 public enum DisplayPlacement {
     public static func resolve(_ p: SavedPlacement, minSize: CGSize, displays: [DisplaySnapshot]) -> CGRect // pure, §9
+    public static func placement(writing frame: CGRect, displays: [DisplaySnapshot]) -> SavedPlacement // §9 writing rule; approved by Marc 17 Oct 2026
 }
 
 // Errors (§12)
@@ -379,7 +380,6 @@ public struct SplitKitConfiguration: Sendable {
     public var detach: Detach = .enabled
     public var undockThreshold: CGFloat = 40                 // pt beyond window bounds
     public var minimumPaneSize = CGSize(width: 160, height: 100)  // per-content minimumSize wins if larger
-    public var dividerHitWidth: CGFloat = 8
     public var focusModeEnabled = true
     public var autosaveDebounce: Duration = .seconds(1)
 }
@@ -392,8 +392,9 @@ public protocol SessionStore: Sendable {
 public protocol PaneHeaderStyle { associatedtype Body: View; func makeBody(configuration: PaneHeaderConfiguration) -> Body }
 public protocol PaneDividerStyle { associatedtype Body: View; func makeBody(configuration: PaneDividerConfiguration) -> Body }
 public protocol EmptyPaneStyle  { associatedtype Body: View; func makeBody(configuration: EmptyPaneConfiguration) -> Body }
-public struct SplitKitTokens: Sendable { public var metrics: Metrics; public var glass: Glass; public var colors: Colors /* §7.2 */ }
+public struct SplitKitTokens: Sendable { /* token groups, names, types and defaults: Docs/Design.md */ }
 // Modifiers: .paneHeaderStyle(_:) .paneDividerStyle(_:) .emptyPaneStyle(_:) .splitKitTokens(_:)
+// Built-in styles and their looks: Docs/Design.md
 ```
 
 ## 6. Layout model
@@ -448,7 +449,7 @@ The engine computes everything purely first; side effects happen only after succ
 
 ### 6.3 Two-stage close
 
-1. `beginClose(P)` marks P **pending** (it's in `WorkspaceRuntime.pendingCloses`, which is runtime-only and never persisted; the tree is unchanged; the header shows a subtle "closing" state). SplitKit then calls `await content.shouldClose()`. The content may show a sheet; it must not mutate the layout.
+1. `beginClose(P)` marks P **pending** (it's in `WorkspaceRuntime.pendingCloses`, which is runtime-only and never persisted; the tree is unchanged; the header shows its pending-close state, Docs/Design.md). SplitKit then calls `await content.shouldClose()`. The content may show a sheet; it must not mutate the layout.
 2. **Accepted →** `commitClose(P)`: the pane is removed (collapse/flatten), its `ContentRecord` is removed, and `released = [contentID]`. The host calls `willRelease()`, then drops the object, and a snapshot is taken. (An `.unavailable` placeholder has no object: SplitKit shows its own confirmation instead of `shouldClose()` and calls no `willRelease()`.)
    **Declined →** `cancelClose(P)`: the pending flag is cleared, and **everything else is untouched**.
 3. **While pending:** any transaction that touches P (move, swap, detach, a resize of its parent, a second close) throws `paneClosePending`, except a self-drop on P, which stays a no-op (§6.2). UI drags from P are disabled. Transactions elsewhere proceed normally, because P's `PaneID` is stable.
@@ -477,7 +478,7 @@ The engine computes everything purely first; side effects happen only after succ
 
 ## 7. Pane chrome
 
-### 7.1 Header contents (left → right, one row, default 28 pt)
+### 7.1 Header contents (left → right, one row)
 
 1. **Drag handle** (grip). Hidden if both rearrange and detach are disabled.
 2. **Content icon** (SF Symbol of the type).
@@ -487,22 +488,13 @@ The engine computes everything purely first; side effects happen only after succ
 6. **Focus toggle**: one click, always visible, never in overflow. It enters and exits focus mode for this pane.
 7. **Close ×**: always last.
 
-There's no maximize button. An empty pane shows "Add Content" in place of the title and keeps the handle, focus and close. The header also shows active/inactive state, a drop highlight and a pending-close state. Right-click opens the same pane menu.
+There's no maximize button. An empty pane shows "Add Content" in place of the title and keeps the handle, focus and close. The header also shows active/inactive state, a drop highlight and a pending-close state. Sizes, symbols and the look of every state are in `Docs/Design.md`. Right-click opens the same pane menu.
 
-### 7.2 Theming
+### 7.2 Visual design
 
-- **Code location:** all chrome lives in `SplitKit/Sources/SplitKit/Chrome/` and `Styles/`. `SplitKitModel`, `SplitKitContent` and the content products contain no chrome styling. Host overrides live in the host.
-- **Convention (standard SwiftUI):** style protocols that behave like `ButtonStyle` (§5), applied through modifiers that propagate in the environment, plus environment-injected `SplitKitTokens`. Header controls are standard SwiftUI `Button`/`Menu`/`Toggle`; there is no custom component library.
-- **Milestone 1 styles:** **`.glass` (default)** uses `glassEffect(_:in:)`, `GlassEffectContainer` and `.buttonStyle(.glass)`, with `Material` for drop overlays. **`.plain`** uses opaque semantic colours. **`.compact` is deferred** to after Phase 3.
-- **Stable token set (v1, kept small on purpose):**
-  - `metrics.headerHeight`, `metrics.dividerThickness`, `metrics.dividerHitWidth`, `metrics.cornerRadius`, `metrics.contentPadding`
-  - `glass.variant` (`.regular`/`.clear`), `glass.tint: Color?`
-  - `colors.activeIndicator`, `colors.dropHighlight` (default to accent/tint)
-
-  Any additions are reviewed as API changes.
-- **System appearance:** semantic colours only. Light/dark, the accent colour, Increase Contrast, Reduce Transparency and Reduce Motion are honoured through system behaviour, with no custom fallback code.
-- **Verification (Phase 2 entry):** a small example screen confirms the exact macOS 26 SDK glass APIs and their behaviour under Reduce Transparency, Increase Contrast and VoiceOver before chrome is built. Any API difference gets a deviation report.
-- **Visual reference:** `Docs/larevo-glass-reference.png` shows dark translucent panels, soft gradient tints, rounded cards, compact pill chips and thin dividers. It is used to tune default tokens. **It is a reference, not a clone.**
+- **`Docs/Design.md` is the single source of truth** for tokens and defaults, the `.glass` and `.plain` styles, system appearance and accessibility behaviour, header anatomy and states, typography, view reuse rules and the Larevo reference. This spec does not redefine any of it.
+- **API contract only** (here and in §5): the three style protocols, their modifiers and the environment-injected `SplitKitTokens`. Adding, removing or renaming a token is an API change.
+- **Phase 2 entry verification:** the example screen described in `Docs/Design.md` confirms the macOS 26 glass APIs and their behaviour under Reduce Transparency, Increase Contrast and VoiceOver before chrome is built. Any difference gets a deviation report.
 
 ### 7.3 Focus model
 
@@ -558,7 +550,7 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
     - The placeholder is saved back unchanged, so data is never lost across launches.
   - **Orphaned records** (no pane in any window references them) are **dropped** and listed in `RestoreReport.normalizations`. Dangling focus is set to nil. A content whose `init(restoring:)` throws becomes the same unavailable placeholder (reason: "couldn't restore"), with the record retained and Restore offering a retry.
   - **Future version** (`version > current`): the file is never overwritten; SplitKit opens the default layout read-from-scratch and reports `unsupportedFutureVersion`.
-- **Migration chain and v0 fixture:** `Session.currentVersion` stays 1. To exercise the chain before a real v2 exists, a **synthetic v0** is defined for tests only (it never shipped): a JSON object with **no `version` key**, `{ "root": LayoutNode?, "contents": [{ "id", "type", "stateVersion", "state" }] }`, i.e. one main window, no placement, no focus fields, no `availability`. A file without `version` is v0. **v0 → v1** wraps it into one `.main` window with `WindowID` `00000000-0000-0000-0000-000000000001` (fixed, so migration stays pure and reproducible), `placement = SavedPlacement(intendedFrame: [[0, 0], [1200, 800]], displayID: nil, relativeOrigin: nil)` (centred on the main display by §9), `activePane = nil`, `focusModePane = nil`, and `availability = .hosted` for every record. The fixture lives at `SplitKit/Tests/SplitKitModelTests/Fixtures/session-v0.json`.
+- **Migration chain and v0 fixture:** `Session.currentVersion` stays 1. To exercise the chain before a real v2 exists, a **synthetic v0** is defined for tests only (it never shipped): a JSON object with **no `version` key**, `{ "root": LayoutNode?, "contents": [{ "id", "type", "stateVersion", "state" }] }`, i.e. one main window, no placement, no focus fields, no `availability`. A file without `version` is v0. An explicit `version` below 1 names no schema and throws `migrationFailed` (*approved by Marc 17 Oct 2026*). **v0 → v1** wraps it into one `.main` window with `WindowID` `00000000-0000-0000-0000-000000000001` (fixed, so migration stays pure and reproducible), `placement = SavedPlacement(intendedFrame: [[0, 0], [1200, 800]], displayID: nil, relativeOrigin: nil)` (centred on the main display by §9), `activePane = nil`, `focusModePane = nil`, and `availability = .hosted` for every record. The fixture lives at `SplitKit/Tests/SplitKitModelTests/Fixtures/session-v0.json`.
 - **Atomic writes:** encode into a temp file in the same directory and fsync it.
   - **First save** (no file yet): create the directory if needed, then atomically move the temp file into place (`FileManager.moveItem`, which is a rename on the same volume).
   - **Later saves:** `FileManager.replaceItemAt(_:withItemAt:)`.
@@ -581,7 +573,7 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
   2. **Origin:** if `relativeOrigin` is non-nil → `vf.origin + relativeOrigin` (on a fallback display this keeps the same offset, which step 4 then pulls inside). If `relativeOrigin` is nil → centred: `(vf.midX − size.width/2, vf.midY − size.height/2)`. (Revision 3's "centred at the same relative position" is replaced by this rule.)
   3. **Size:** first raised to `minSize` per axis, then, if larger than `vf`, **clamped to `vf.size`, even below the content minimum** (reachability wins over minimum size; panes then compress per §6.1.4).
   4. **Translate** so the window is **fully inside `vf`** (the title bar is always reachable): `x = min(max(x, vf.minX), vf.maxX − width)`, same for y. No rounding. That's stricter than the previous 80% rule, so the two never conflict.
-  - **Writing a placement:** on a user move/resize, `displayID` = the display containing the largest part of the window (ties → earlier in `displays`), `relativeOrigin = frame.origin − vf.origin`, `intendedFrame = frame`.
+  - **Writing a placement** (`DisplayPlacement.placement(writing:displays:)`): on a user move/resize, `displayID` = the display containing the largest part of the window (ties → earlier in `displays`), `relativeOrigin = frame.origin − vf.origin`, `intendedFrame = frame`. *Gap rules, approved by Marc 17 Oct 2026:* "largest part" is the intersection area with each display's `frame` (the offset still uses `visibleFrame.origin`); a window touching no display ties at zero and goes to `displays[0]`; with no displays, `displayID` and `relativeOrigin` are nil (centred on restore).
 - **No drift:**
   - **`intendedFrame`** is what the user last set by moving or resizing.
   - The **actual frame** is the resolved result.
@@ -634,7 +626,7 @@ If a required item fails, Marc gets a deviation report. There is no silent switc
 | **P1 Model + feasibility spikes** | Repo skeleton (2 packages, Xcode app, CI, `CLAUDE.md`, `Docs/Traceability.md`); full `SplitKitModel` (tree, transactions incl. §6.2 window transactions, validate, `IDGenerator`, migrations v0 → v1, DisplayPlacement); **Spike A** (`Spikes/SpikeA-LiveTransfer/`): cross-window live-content transfer (AppKit drag session; state, first responder/focus handover, cancel and failed drops, cleanup, single host); **Spike B** (`Spikes/SpikeB-RealityKit/`): RealityKit/GLTFKit2 standalone (§10), including the GLTFKit2 pin. Results are recorded in §11.1 | `SplitKitModel` line coverage ≥ 90% (measured per §13) plus property tests green. Spike A demo: a counter and a live 3D view move between two windows with state and responder intact, cancelled drops leave no residue, and there's never a double host (asserted). Spike B meets §10 spike items. Each spike ends in a written result (§11.1) with an explicit **go/no-go gate**:
 - **Gate A (live transfer):** go if every criterion passes. No-go → Marc decides between (a) commands-only detach/dock in v1, or (b) a redesign. P2 does not start until he decides.
 - **Gate B (3D):** go if the camera contract and the required §10 corpus rows pass. No-go → a deviation report with options. ModelViewer3D work is paused until Marc decides; SplitKit work continues. |
-| **P2 Usable split UI** | Rendering, dividers with minimum sizes, header (§7.1), content picker, empty state, two-stage close, focus mode, menus and shortcuts, `.glass` + `.plain` with tokens, persistence with atomic autosave, dummy contents (colour, counter) | A 2×2 and a 3-level mixed tree can be built by mouse and by keyboard only. Close confirmation can be declined, leaving no change. The last pane leaves the empty state and the app stays running. Relaunch restores everything; an invalid file → default layout + `.invalid` file kept. Glass/accessibility example verified. |
+| **P2 Usable split UI** | Rendering, dividers with minimum sizes, header (§7.1), content picker, empty state, two-stage close, focus mode, menus and shortcuts, `.glass` + `.plain` with tokens (`Docs/Design.md`), persistence with atomic autosave, dummy contents (colour, counter) | A 2×2 and a 3-level mixed tree can be built by mouse and by keyboard only. Close confirmation can be declined, leaving no change. The last pane leaves the empty state and the app stays running. Relaunch restores everything; an invalid file → default layout + `.invalid` file kept. Glass/accessibility example verified. |
 | **P3 Detach, dock, displays** | Drag-out threshold, ghost window, dock targets, Detach / Move to Window / Dock Back, window close rules, placement with no drift, host-managed mode sample | The counter state survives every path. The simulated-display matrix passes. Single-screen manual checklist passes. The host-mode sample target works with persistence disabled. |
 | **P4 Real contents** | `ImageViewer`, `ModelViewer3D` products | The §10 corpus criteria are met. Each product works standalone, docked and detached. **A clean consumer test per product** (a fresh package depending on only that product builds and runs). |
 | **P5 Optional spatial** | Spatial presentation behind a toggle | With it off, behaviour is identical; the model is untouched; text stays legible. |
@@ -643,17 +635,25 @@ If a required item fails, Marc gets a deviation report. There is no silent switc
 
 Both spikes ran on Xcode 27.1 (27A9275) / Swift 6.4 on Marc's Mac (macOS 27.0.1). The code stays in `Spikes/`, the hand checks are `Docs/SpikeA-checklist.md` and `Docs/SpikeB-checklist.md`. **Both gates are GO, conditional on Marc's manual checks**; a failed manual check turns that gate into NO-GO with the options below.
 
+**Approved deviations (approved by Marc 17 Oct 2026):**
+1. CI Xcode selector prefers exactly 27.1 (incl. RC) over newer 27.x betas instead of "newest" (§1).
+2. New public API `DisplayPlacement.placement(writing:displays:)` for the §9 writing rule (§5, §9).
+3. The three §9 writing-rule gap rules: overlap measured against display `frame`; no overlap → `displays[0]`; no displays → nil `displayID` and `relativeOrigin` (§9).
+4. An explicit `version` below 1 throws `migrationFailed` (§8).
+5. Spike A refuses drops onto occupied panes (spike only; product semantics stay §6.2).
+6. Spike B uses a custom camera controller instead of native `CameraControls` (§10, carried into P4).
+
 **Spike A, live transfer (Gate A): GO, conditional on `Docs/SpikeA-checklist.md`.**
 - **Mechanism:** AppKit drag sessions. The pane header is the `NSDraggingSource` (4 pt threshold, in-app `.move` only, a private pasteboard type carrying IDs only); each pane is an `NSDraggingDestination`. `draggingSession(_:endedAt:operation:)` is the single cancel and cleanup point for Esc, drop-outside and refused drops. Drag and *Move to Other Window* share one coordinator transaction: validate on a copy, commit, then side effects.
 - **Re-hosting:** a fresh `NSHostingView` from `makeView()` for the same object; view-local `@State` resets (§6.4) and the old view deallocates. First responder is resigned in the source and handed to the content in the destination (key window + `makeFirstResponder`); focus detection must include the SwiftUI field editor.
 - **Evidence:** 21 automated tests with two real windows and the real drop-destination code. A counter and a live RealityKit view keep identity and state, the responder follows, cancelled and failed drops leave no residue (view census, registry bytes), a double host throws and traps in debug (exit tests), and 5,000-step random sequences keep one host. The destination pane is chosen in pane creation order.
-- **Spike-only simplifications** (not carried into product code): drops onto occupied panes are refused, since the §6.2 swap and edge split belong to the model and P3; spike-local `HostID`/`HostRegistry` stand in for the §5 types (P3 maps them).
+- **Spike-only simplifications** (not carried into product code): drops onto occupied panes are refused (*approved by Marc 17 Oct 2026*), since the §6.2 swap and edge split belong to the model and P3; spike-local `HostID`/`HostRegistry` stand in for the §5 types (P3 maps them).
 - **Manual-pending:** 3D rendering after a move, focus after a real mouse drag, real Esc / drop-outside / Locked-pane drops, drag feel. **Gaps:** the mouse-driven `NSDraggingSession` can't be created in a test; closing a window, quitting or deactivating mid-drag, Spaces and full screen are untested; the release-mode double-host fallback is untested. **NO-GO options:** (a) commands-only detach/dock in v1, (b) a redesign.
 
 **Spike B, GLTFKit2 → RealityKit (Gate B): GO, conditional on `Docs/SpikeB-checklist.md`** (camera on trackpad and mouse, PBR look).
 - **Pin:** GLTFKit2 `exact: "0.5.15"` (tag 2026-01-14, commit `e69e354`, binary xcframework with SwiftPM checksum).
 - **API on Xcode 27.1:** `try GLTFAsset(url:options:)`, then `GLTFRealityKitLoader.convert(scene: asset.defaultScene!, asset: asset)` (`@MainActor`; without `asset:` animations are lost). `try await GLTFRealityKitLoader.load(from:)` also works. Needs `@preconcurrency import GLTFKit2`.
-- **Camera: custom controller.** Native `CameraControls` is one mode per view (`.orbit`, `.pan`, `.tilt` or `.dolly`, not combinable) with no reset, no dolly clamp and no pose access, so it can't meet the contract. A camera entity driven by our orbit / pan / dolly / reset maths does: bounding-sphere framing, dolly clamped to [0.1·r, 10·framed distance], never through the target. Input: drag = orbit; ⇧-drag, middle-drag and trackpad scroll = pan; mouse wheel and pinch = dolly. **Open question:** whether macOS `RealityView` renders through the camera entity; fallback: apply the inverse camera transform to the scene root.
+- **Camera: custom controller** (*approved by Marc 17 Oct 2026*). Native `CameraControls` is one mode per view (`.orbit`, `.pan`, `.tilt` or `.dolly`, not combinable) with no reset, no dolly clamp and no pose access, so it can't meet the contract. A camera entity driven by our orbit / pan / dolly / reset maths does: bounding-sphere framing, dolly clamped to [0.1·r, 10·framed distance], never through the target. Input: drag = orbit; ⇧-drag, middle-drag and trackpad scroll = pan; mouse wheel and pinch = dolly. **Open question:** whether macOS `RealityView` renders through the camera entity; fallback: apply the inverse camera transform to the scene root.
 - **Corpus, required rows:** bounding boxes 0.0000% off the reference, +Y up and node transforms exact; external `.bin`/textures and embedded GLB load with no missing textures; load ≤ 2 s (DamagedHelmet ≈ 150 ms); malformed, `.fbx`, missing `.bin` and Draco give typed errors, no crash. The PBR look is a manual check. **Optional rows:** skinning/animation plays, clearcoat is converted, morph targets and transmission are unsupported, Draco is refused, KTX2 is untested.
 - **Gaps and P4 risks:** the 2 Artifex exports are missing; GLTFKit2 can `fatalError` on unusual valid files (refuse e.g. `KHR_mesh_quantization` up front, validate accessors); conversion blocks the main actor (parse off-main); undecodable textures drop silently (keep the texture audit); a Magic Mouse scroll pans instead of zooming. Fixtures live in `Spikes/SpikeB-RealityKit/Fixtures` until P4 moves them. **NO-GO options:** the scene-root camera fallback, a different input mapping, or accepting PBR differences as documented gaps. No SceneKit switch.
 
@@ -694,7 +694,7 @@ Both spikes ran on Xcode 27.1 (27A9275) / Swift 6.4 on Marc's Mac (macOS 27.0.1)
 | R-CLOSE | Two-stage close incl. window close; runtime-only pending | §6.3 | unit + integration |
 | R-STATE | State ownership / single host | §6.4 | counter test, debug assertion |
 | R-HDR | Header contents, focus toggle, overflow | §7.1, §7.4 | snapshot + manual |
-| R-THEME | `.glass`/`.plain`, tokens, accessibility | §7.2 | snapshot + P2 example |
+| R-THEME | `.glass`/`.plain`, tokens, accessibility | `Docs/Design.md` (§7.2) | snapshot + P2 example |
 | R-FOCUS | activePane / focusModePane rules | §7.3 | unit + manual |
 | R-KEYS | Shortcut table, collisions, close-semantics usability | §7.5 | unit + manual usability check |
 | R-PERSIST | Fatal vs recoverable validation, registry marking, unavailable placeholders, orphan drop, v0 → v1 chain, encoder setup, atomic first and later save | §8 | unit + fault-injection |
@@ -709,7 +709,7 @@ Both spikes ran on Xcode 27.1 (27A9275) / Swift 6.4 on Marc's Mac (macOS 27.0.1)
 1. Cross-window live-content transfer: SwiftUI drag and drop is limited, so AppKit drag sessions are probably needed. This is **de-risked first** in P1 Spike A.
 2. GLTFKit2's RealityKit conversion has gaps, measured by the §10 corpus in Spike B.
 3. Real multi-monitor behaviour is verified only in simulation.
-4. The macOS 26 glass APIs or their accessibility behaviour may differ from this spec, which is checked by the P2 example.
+4. The macOS 26 glass APIs or their accessibility behaviour may differ from `Docs/Design.md`, which is checked by the P2 example.
 5. CI runner availability for Xcode 27.1: mitigated by the `xcode-27` preview image accepting any 27.x, with the fallback in §1.
 6. Claude usage limits can pause implementation.
 
