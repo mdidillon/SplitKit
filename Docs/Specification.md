@@ -69,7 +69,7 @@ Traceability (§13.1): R-TREE, R-TXN, R-CLOSE, R-PERSIST, R-WIN and R-TOOL rows 
 | Structure | `SplitKit/` and `SplitKitViews/` are separate, extractable Swift packages. `SplitKitTestApp/` is a plain **Xcode project**, used as both the test app and the integration sample. |
 | Views | One product per content view. First contents: **ImageViewer** (display only) and **ModelViewer3D** (glTF/GLB via **GLTFKit2 + RealityKit**; FBX out). |
 | Header | SplitKit owns it. **Focus toggle in the header**, no maximize button. |
-| Look | **Liquid Glass default** using native SwiftUI glass APIs and materials, plus environment design tokens. The Larevo screenshot (`Concept/larevo-glass-reference.png`) is a **reference, not a clone**. |
+| Look | **Liquid Glass default** using native SwiftUI glass APIs and materials, plus environment design tokens. The Larevo screenshot (`Docs/larevo-glass-reference.png`) is a **reference, not a clone**. |
 | Lifecycle | Closing the last pane never quits the app (empty state with an Add button and a menu command). |
 | Monitors | Required. Marc tests on a single MacBook screen, so placement is a pure model tested over simulated displays (§9). |
 
@@ -93,8 +93,7 @@ SplitKit/                        (repo root)
 ├─ Spikes/                       Phase 1 throwaway code, never a dependency of any package
 │  ├─ SpikeA-LiveTransfer/       Xcode project: two windows, AppKit drag session (may use local SplitKit packages)
 │  └─ SpikeB-RealityKit/         Xcode project: GLTFKit2 + RealityKit only, no SplitKit (§10)
-├─ Concept/                      concept art and visual references (e.g. larevo-glass-reference.png)
-├─ Docs/                         Phase0-Spec.md, Traceability.md, Manual/
+├─ Docs/                         Specification.md, Traceability.md, SpikeA-checklist.md, SpikeB-checklist.md, larevo-glass-reference.png (flat)
 ├─ CLAUDE.md                     working rules for Claude (summarises §1, §3, §13; the spec wins on conflict)
 └─ .github/workflows/ci.yml
 ```
@@ -503,7 +502,7 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
   Any additions are reviewed as API changes.
 - **System appearance:** semantic colours only. Light/dark, the accent colour, Increase Contrast, Reduce Transparency and Reduce Motion are honoured through system behaviour, with no custom fallback code.
 - **Verification (Phase 2 entry):** a small example screen confirms the exact macOS 26 SDK glass APIs and their behaviour under Reduce Transparency, Increase Contrast and VoiceOver before chrome is built. Any API difference gets a deviation report.
-- **Visual reference:** `Concept/larevo-glass-reference.png` shows dark translucent panels, soft gradient tints, rounded cards, compact pill chips and thin dividers. It is used to tune default tokens. **It is a reference, not a clone.**
+- **Visual reference:** `Docs/larevo-glass-reference.png` shows dark translucent panels, soft gradient tints, rounded cards, compact pill chips and thin dividers. It is used to tune default tokens. **It is a reference, not a clone.**
 
 ### 7.3 Focus model
 
@@ -642,16 +641,16 @@ If a required item fails, Marc gets a deviation report. There is no silent switc
 
 ### 11.1 Phase 1 spike results
 
-Both spikes ran on Xcode 27.1 (27A9275) / Swift 6.4 on Marc's Mac (macOS 27.0.1). The code stays in `Spikes/`, the hand checks are in `Docs/Manual/`. **Both gates are GO, conditional on Marc's manual checks**; a failed manual check turns that gate into NO-GO with the options below.
+Both spikes ran on Xcode 27.1 (27A9275) / Swift 6.4 on Marc's Mac (macOS 27.0.1). The code stays in `Spikes/`, the hand checks are `Docs/SpikeA-checklist.md` and `Docs/SpikeB-checklist.md`. **Both gates are GO, conditional on Marc's manual checks**; a failed manual check turns that gate into NO-GO with the options below.
 
-**Spike A, live transfer (Gate A): GO, conditional on `Docs/Manual/SpikeA-checklist.md`.**
+**Spike A, live transfer (Gate A): GO, conditional on `Docs/SpikeA-checklist.md`.**
 - **Mechanism:** AppKit drag sessions. The pane header is the `NSDraggingSource` (4 pt threshold, in-app `.move` only, a private pasteboard type carrying IDs only); each pane is an `NSDraggingDestination`. `draggingSession(_:endedAt:operation:)` is the single cancel and cleanup point for Esc, drop-outside and refused drops. Drag and *Move to Other Window* share one coordinator transaction: validate on a copy, commit, then side effects.
 - **Re-hosting:** a fresh `NSHostingView` from `makeView()` for the same object; view-local `@State` resets (§6.4) and the old view deallocates. First responder is resigned in the source and handed to the content in the destination (key window + `makeFirstResponder`); focus detection must include the SwiftUI field editor.
 - **Evidence:** 21 automated tests with two real windows and the real drop-destination code. A counter and a live RealityKit view keep identity and state, the responder follows, cancelled and failed drops leave no residue (view census, registry bytes), a double host throws and traps in debug (exit tests), and 5,000-step random sequences keep one host. The destination pane is chosen in pane creation order.
 - **Spike-only simplifications** (not carried into product code): drops onto occupied panes are refused, since the §6.2 swap and edge split belong to the model and P3; spike-local `HostID`/`HostRegistry` stand in for the §5 types (P3 maps them).
 - **Manual-pending:** 3D rendering after a move, focus after a real mouse drag, real Esc / drop-outside / Locked-pane drops, drag feel. **Gaps:** the mouse-driven `NSDraggingSession` can't be created in a test; closing a window, quitting or deactivating mid-drag, Spaces and full screen are untested; the release-mode double-host fallback is untested. **NO-GO options:** (a) commands-only detach/dock in v1, (b) a redesign.
 
-**Spike B, GLTFKit2 → RealityKit (Gate B): GO, conditional on `Docs/Manual/SpikeB-checklist.md`** (camera on trackpad and mouse, PBR look).
+**Spike B, GLTFKit2 → RealityKit (Gate B): GO, conditional on `Docs/SpikeB-checklist.md`** (camera on trackpad and mouse, PBR look).
 - **Pin:** GLTFKit2 `exact: "0.5.15"` (tag 2026-01-14, commit `e69e354`, binary xcframework with SwiftPM checksum).
 - **API on Xcode 27.1:** `try GLTFAsset(url:options:)`, then `GLTFRealityKitLoader.convert(scene: asset.defaultScene!, asset: asset)` (`@MainActor`; without `asset:` animations are lost). `try await GLTFRealityKitLoader.load(from:)` also works. Needs `@preconcurrency import GLTFKit2`.
 - **Camera: custom controller.** Native `CameraControls` is one mode per view (`.orbit`, `.pan`, `.tilt` or `.dolly`, not combinable) with no reset, no dolly clamp and no pose access, so it can't meet the contract. A camera entity driven by our orbit / pan / dolly / reset maths does: bounding-sphere framing, dolly clamped to [0.1·r, 10·framed distance], never through the target. Input: drag = orbit; ⇧-drag, middle-drag and trackpad scroll = pan; mouse wheel and pinch = dolly. **Open question:** whether macOS `RealityView` renders through the camera entity; fallback: apply the inverse camera transform to the scene root.
@@ -671,7 +670,7 @@ Both spikes ran on Xcode 27.1 (27A9275) / Swift 6.4 on Marc's Mac (macOS 27.0.1)
 - **Property/invariant tests** (random transaction sequences, ≥ 10,000 per CI run with a fixed seed recorded; the same seed drives the transaction generator and `SeededIDGenerator`, so two runs with one seed produce byte-identical sessions): the tree stays valid, ownership is unique, fractions are finite and positive and sum to 1, identities are preserved, a thrown transaction leaves the session byte-identical (and the runtime equal), a self-drop is always identity, and an encode → decode round trip is identity.
 - **Negative tests:** every `LayoutError`, `RegistryError` and `PersistenceError` case has at least one test.
 - **Snapshot (UI):** headers at wide, narrow and minimum widths × light/dark/increased contrast × `.glass`/`.plain`; the overflow order.
-- **Manual (Marc's single MacBook screen), with a checklist in `Docs/Manual/`:** drag feel and threshold, cancel by Esc, cross-window dock, VoiceOver and keyboard-only operation, trackpad vs mouse in 3D, a resolution change in System Settings, a hand-edited session with a missing display, full screen + focus mode. **Remaining risk:** real hot-plug, multi-display Spaces and full-screen interplay are untested without a second display.
+- **Manual (Marc's single MacBook screen), with a checklist directly in `Docs/`:** drag feel and threshold, cancel by Esc, cross-window dock, VoiceOver and keyboard-only operation, trackpad vs mouse in 3D, a resolution change in System Settings, a hand-edited session with a missing display, full screen + focus mode. **Remaining risk:** real hot-plug, multi-display Spaces and full-screen interplay are untested without a second display.
 - **Manual usability check (close semantics):** with 3 panes in a main window plus 1 detached window, run each of: ⌘W on a pane, ⌘W on the last main-window pane, ⌘W in the detached window, ⇧⌘W on each window, ⌘W in the empty main window, and the red close button. For each, record whether the result matched the menu label, whether Marc predicted it before pressing, and whether the prompt text was clear. Any mismatch is a P2 bug.
 - **Failed-transaction integration tests:**
   - A failed detach (e.g. `paneClosePending`) creates **no** window, empty or not.
