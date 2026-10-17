@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import SwiftUI
+import Testing
 import SplitKitContent
 import SplitKitModel
 @testable import SplitKit
@@ -16,6 +17,9 @@ final class TestContent: PaneContent {
 
     let id: ContentID
     var acceptsClose = true
+    /// `shouldClose()` waits for `answerClose(_:)`, like a content showing a sheet.
+    var suspendsClose = false
+    @ObservationIgnored private var closeAnswer: CheckedContinuation<Bool, Never>?
     private(set) var shouldCloseCalls = 0
     private(set) var willReleaseCalls = 0
     private(set) var makeViewCalls = 0
@@ -33,9 +37,41 @@ final class TestContent: PaneContent {
     func encodeState() throws -> Data { Data() }
     func shouldClose() async -> Bool {
         shouldCloseCalls += 1
+        if suspendsClose { return await withCheckedContinuation { closeAnswer = $0 } }
         return acceptsClose
     }
     func willRelease() { willReleaseCalls += 1 }
+
+    /// Whether `shouldClose()` is waiting for its answer.
+    var isAskingToClose: Bool { closeAnswer != nil }
+
+    func answerClose(_ accept: Bool) {
+        closeAnswer?.resume(returning: accept)
+        closeAnswer = nil
+    }
+}
+
+/// A second succeeding content type, so tests can tell which type the picker inserted.
+@MainActor @Observable
+final class OtherContent: PaneContent {
+    static let type = ContentType(raw: "test.other")
+    static let displayName = "Other"
+    static let systemImage = "circle"
+    static let minimumSize = CGSize.zero
+    static let stateVersion = 1
+
+    let id: ContentID
+
+    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+        self.id = id
+    }
+
+    var title: String { "Other" }
+    var toolbarItems: [PaneToolbarItem] { [] }
+    func makeView() -> AnyView { AnyView(Color.clear) }
+    func encodeState() throws -> Data { Data() }
+    func shouldClose() async -> Bool { true }
+    func willRelease() {}
 }
 
 /// A content whose creation always fails.
@@ -86,6 +122,39 @@ extension SplitKitWorkspace {
     var mainLayout: WindowLayout { windowLayout(mainWindow!)! }
     /// The main window's panes with their contents, in tree order.
     var mainLeaves: [(pane: PaneID, content: ContentID?)] { mainLayout.root?.leaves ?? [] }
+
+    /// Adds an unavailable placeholder (a record whose type has no live object, spec §8) in a new pane to
+    /// the right of `pane`, or into the empty main window when `pane` is nil.
+    @discardableResult
+    func addPlaceholder(besides pane: PaneID? = nil, type: ContentType = ContentType(raw: "test.missing")) throws -> (pane: PaneID, content: ContentID) {
+        let content = NewContent(id: ContentID(raw: UUID()), type: type, stateVersion: 1)
+        let before = Set(mainLeaves.map(\.pane))
+        if let pane {
+            try commit(.insert(content, at: pane, edge: .right, in: try window(containing: pane)))
+        } else {
+            try commit(.insertIntoEmptyWindow(content, in: mainLayout.id))
+        }
+        let added = try #require(mainLeaves.first { !before.contains($0.pane) }?.pane)
+        return (added, content.id)
+    }
+
+    /// Performs `command` and answers the close prompt it shows with `confirmed`. Returns that prompt, or
+    /// nil if the command finished without one.
+    @discardableResult
+    func perform(_ command: SplitKitCommand, answering confirmed: Bool) async throws -> ClosePrompt? {
+        let task = Task { try await self.perform(command) }
+        var shown: ClosePrompt?
+        for _ in 0..<100 where shown == nil {
+            if let prompt = closePrompt {
+                shown = prompt
+                answer(prompt, confirmed: confirmed)
+            } else {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+        }
+        try await task.value
+        return shown
+    }
 }
 
 /// A toolbar layout entry.

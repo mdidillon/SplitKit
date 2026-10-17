@@ -89,9 +89,9 @@ import SplitKitModel
 
     @Test func menuListsRegisteredTypesInRegistrationOrder() async throws {
         let pane = try await addFirst()
-        #expect(menu(pane).types.map(\.type) == [TestContent.type, FailingContent.type])
-        #expect(menu(pane).types.first?.displayName == "Test")
-        #expect(menu(pane).types.first?.systemImage == "square")
+        #expect(menu(pane).picker.entries.map(\.type) == [TestContent.type, FailingContent.type])
+        #expect(menu(pane).picker.entries.first?.displayName == "Test")
+        #expect(menu(pane).picker.entries.first?.systemImage == "square")
     }
 
     @Test func addOnAnOccupiedPaneCreatesANewContentInANewPane() async throws {
@@ -157,7 +157,7 @@ import SplitKitModel
                                       ids: SeededIDGenerator(seed: 1))
         _ = empty.restoreOrOpenDefault()
         let model = empty.paneMenuModel(for: PaneID(raw: UUID()), content: nil)
-        #expect(model.types.isEmpty)
+        #expect(model.picker.entries.isEmpty)
         #expect(!model.canAdd)
     }
 

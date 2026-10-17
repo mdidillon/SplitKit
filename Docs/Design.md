@@ -137,6 +137,8 @@ The element order and behaviour are in spec §7.1 and the layout and overflow ru
 | **Empty pane** | Header shows "Add Content" as the title (spec §7.1); body shows `plus.rectangle.on.rectangle` at the empty-state size, `.secondary`, a title and the Add Content button (§4) | same with §4.2 button |
 | **Empty window** (no panes) | Same composition as the empty pane, centred in the window; title "No Content" **[check]** | same |
 | **Unavailable placeholder** | The type's symbol (or `questionmark.square.dashed` when unknown), the message from spec §8 in `.secondary`, **Restore** (`.glass`) and **Close** buttons | same with `.bordered` buttons |
+| **Content picker** | Add Content (empty pane, empty window) opens a popover on the empty state with one borderless button per registered type, `Label(displayName, systemImage)`, in registry order, default popover padding; the pane menu lists the same buttons | same |
+| **Close confirmation** | System alert (§4.3): the window prompt "Close window with N panes?" with **Close All** and **Cancel**, or "Close ‹Type›?" with **Close** and **Cancel** for an unavailable placeholder; shown on the window of the pane. While it is open the pane (or every pane of the window) is in the pending-close state above | same |
 | **Focus mode** | The focused card fills the window; no extra decoration besides the toggled focus symbol | same |
 
 The **Drop target** overlay is rendered by the P3 drag chrome (drag targets), reading the same tokens (§3, §4); the header configuration carries `isDropTarget` for it.

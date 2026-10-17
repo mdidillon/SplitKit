@@ -35,9 +35,7 @@ struct PaneCardView: View {
                 emptyStyle.makeBody(configuration: unavailableConfiguration(content))
             }
         } else {
-            emptyStyle.makeBody(configuration: EmptyPaneConfiguration(
-                kind: .emptyPane, title: ChromeText.emptyTitle, message: nil,
-                primaryAction: workspace.addContentAction(into: pane)))
+            EmptyContentView(workspace: workspace, target: .emptyPane(pane))
         }
     }
 
@@ -57,15 +55,17 @@ struct PaneCardView: View {
 
     // MARK: Placeholder
 
-    /// A pane whose content has no live object (spec §8): Restore comes with the persistence task.
+    /// A pane whose content has no live object (spec §8). Restore is enabled once the registry has the type
+    /// (and no close is pending); it does nothing until the persistence task adds `restoreUnavailable`.
+    /// Close asks SplitKit's own confirmation (`closePane`).
     private func unavailableConfiguration(_ content: ContentID) -> EmptyPaneConfiguration {
-        let metadata = workspace.metadata(of: content)
-        let typeName = metadata?.displayName ?? workspace.record(content)?.type.raw ?? ""
+        let isClosing = workspace.isClosing(pane: pane)
         return EmptyPaneConfiguration(
-            kind: .unavailable(systemImage: metadata?.systemImage), title: nil,
-            message: ChromeText.unavailable(typeName),
-            primaryAction: EmptyPaneConfiguration.Action(title: ChromeText.restore, isEnabled: false) {},
-            secondaryAction: EmptyPaneConfiguration.Action(title: ChromeText.close) {
+            kind: .unavailable(systemImage: workspace.metadata(of: content)?.systemImage), title: nil,
+            message: ChromeText.unavailable(workspace.typeName(of: content) ?? ""),
+            primaryAction: EmptyPaneConfiguration.Action(
+                title: ChromeText.restore, isEnabled: !isClosing && workspace.metadata(of: content) != nil) {},
+            secondaryAction: EmptyPaneConfiguration.Action(title: ChromeText.close, isEnabled: !isClosing) {
                 workspace.send(.closePane(pane))
             })
     }

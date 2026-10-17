@@ -14,7 +14,7 @@ extension SplitKitWorkspace {
             systemImage: content == nil ? nil : metadata?.systemImage,
             showsFocusToggle: configuration.focusModeEnabled,
             isActive: isActive,
-            isPendingClose: runtime.pendingCloses.contains(pane),
+            isPendingClose: isClosing(pane: pane),
             isEmpty: content == nil,
             isFocusMode: window.focusModePane == pane,
             menu: AnyView(PaneMenu(workspace: self, model: paneMenuModel(for: pane, content: content))),
@@ -30,6 +30,6 @@ extension SplitKitWorkspace {
     private func title(of content: ContentID?, metadata: ContentRegistry.Metadata?) -> String {
         guard let content else { return ChromeText.addContent }
         if let object = store[content] { return object.title }
-        return metadata?.displayName ?? record(content)?.type.raw ?? ChromeText.addContent
+        return typeName(of: content) ?? ChromeText.addContent
     }
 }

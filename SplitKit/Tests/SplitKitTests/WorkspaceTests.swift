@@ -298,7 +298,7 @@ import SplitKitModel
         let objectA = try #require(object(content(in: a))), objectB = try #require(object(content(in: b)))
         objectB.acceptsClose = false
         let bytes = try Migrator.encode(workspace.session)
-        try await workspace.perform(.closeWindow(main))
+        try await workspace.perform(.closeWindow(main), answering: true)
         #expect(objectA.shouldCloseCalls == 1 && objectB.shouldCloseCalls == 1)
         #expect(objectA.willReleaseCalls == 0 && objectB.willReleaseCalls == 0)
         #expect(try Migrator.encode(workspace.session) == bytes)
@@ -309,7 +309,7 @@ import SplitKitModel
         let a = try await addFirst()
         let b = try await addNext(to: a, edge: .right)
         let objects = try [a, b].map { try #require(object(content(in: $0))) }
-        try await workspace.perform(.closeWindow(main))
+        try await workspace.perform(.closeWindow(main), answering: true)
         #expect(objects.allSatisfy { $0.willReleaseCalls == 1 })
         #expect(workspace.session.windows.isEmpty)
         #expect(workspace.session.contents.isEmpty)

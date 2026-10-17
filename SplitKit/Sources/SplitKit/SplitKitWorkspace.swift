@@ -17,6 +17,10 @@ public final class SplitKitWorkspace {
     let store = ContentStore()
     /// Source of new PaneIDs, SplitIDs, ContentIDs and WindowIDs. Advancing it is not app state (§6.2).
     @ObservationIgnored private var ids: any IDGenerator
+    /// The confirmation the close UI shows now (the first of the queue); runtime-only, never persisted.
+    private(set) var closePrompt: ClosePrompt?
+    @ObservationIgnored private var closePrompts: [(prompt: ClosePrompt, answer: CheckedContinuation<Bool, Never>)] = []
+    @ObservationIgnored private var closePromptCount = 0
 
     public convenience init(registry: ContentRegistry, configuration: SplitKitConfiguration) throws(PersistenceError) {
         self.init(registry: registry, configuration: configuration, ids: SystemIDGenerator())
@@ -151,6 +155,20 @@ public final class SplitKitWorkspace {
         record(content).flatMap { registry.metadata(for: $0.type) }
     }
 
+    /// The display name of a content's type, or its raw type name when the type isn't registered.
+    func typeName(of content: ContentID) -> String? {
+        metadata(of: content)?.displayName ?? record(content)?.type.raw
+    }
+
+    /// A close of `pane`, or of the window it is in, is waiting for an answer (§6.3).
+    func isClosing(pane: PaneID) -> Bool {
+        runtime.pendingCloses.contains(pane) || (try? window(containing: pane)).map(isClosing(window:)) == true
+    }
+
+    func isClosing(window: WindowID) -> Bool {
+        runtime.pendingWindowCloses.contains(window)
+    }
+
     // MARK: Transactions
 
     /// Pure: the result of `transaction` on the current state; nothing is committed.
@@ -177,23 +195,31 @@ public final class SplitKitWorkspace {
     // MARK: Two-stage close (§6.3)
 
     /// `beginClose`, then the content's `shouldClose()`; accepted → `commitClose` (release), declined →
-    /// `cancelClose`. Empty panes and unavailable placeholders (no object) commit without asking; the
-    /// placeholder's own confirmation is part of the close UI task.
+    /// `cancelClose`. Empty panes commit without asking. An unavailable placeholder has no object: SplitKit's
+    /// own confirmation replaces `shouldClose()`, and nothing is released (§6.3.2).
     private func closePane(_ pane: PaneID) async throws(LayoutError) {
         let window = try window(containing: pane)
         let content = windowLayout(window)?.root?.leaves.first { $0.pane == pane }?.content
         try commit(.beginClose(pane))
         var accepted = true
-        if let content, let object = store[content] {
-            accepted = await object.shouldClose()
+        if let content {
+            if let object = store[content] {
+                accepted = await object.shouldClose()
+            } else {
+                accepted = await confirm(.placeholder(typeName: typeName(of: content) ?? ""), in: window)
+            }
         }
         try commit(accepted ? .commitClose(pane) : .cancelClose(pane))
     }
 
-    /// `beginCloseWindow`, then every hosted content in tree order; the first decline cancels and nothing
-    /// is closed. The combined "Close window with N panes?" prompt is part of the close UI task.
+    /// `beginCloseWindow`, then the one window prompt when it applies (`closePromptKind(forWindow:)`), then
+    /// every hosted content in tree order; the first decline, or Cancel, cancels and nothing is closed.
     private func closeWindow(_ window: WindowID) async throws(LayoutError) {
         try commit(.beginCloseWindow(window))
+        if let kind = closePromptKind(forWindow: window), !(await confirm(kind, in: window)) {
+            try commit(.cancelCloseWindow(window))
+            return
+        }
         for leaf in windowLayout(window)?.root?.leaves ?? [] {
             guard let content = leaf.content, let object = store[content] else { continue }
             let accepted = await object.shouldClose()
@@ -203,5 +229,25 @@ public final class SplitKitWorkspace {
             }
         }
         try commit(.commitCloseWindow(window))
+    }
+
+    // MARK: Close confirmations (§7.5, §8)
+
+    /// Shows a prompt of `kind` on `window` and returns the user's answer. Prompts are queued, one at a time.
+    private func confirm(_ kind: ClosePrompt.Kind, in window: WindowID) async -> Bool {
+        closePromptCount += 1
+        let prompt = ClosePrompt(id: closePromptCount, window: window, kind: kind)
+        return await withCheckedContinuation { continuation in
+            closePrompts.append((prompt, continuation))
+            closePrompt = closePrompts.first?.prompt
+        }
+    }
+
+    /// Answers `prompt` (the one being shown; anything else is ignored) and shows the next one, if any.
+    func answer(_ prompt: ClosePrompt, confirmed: Bool) {
+        guard let first = closePrompts.first, first.prompt == prompt else { return }
+        closePrompts.removeFirst()
+        closePrompt = closePrompts.first?.prompt
+        first.answer.resume(returning: confirmed)
     }
 }
