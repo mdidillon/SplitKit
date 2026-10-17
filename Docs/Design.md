@@ -47,6 +47,9 @@ Values every style needs but that are not public tokens. They live in **one inte
 | Empty-state symbol size | 28 pt **[check]** | Symbol in the empty pane and empty window |
 | Empty-state spacing | 8 pt **[check]** | Vertical spacing in empty and placeholder views |
 | Animations | `.smooth` (system default) | State changes (active, drop target, pending close); no custom curves or durations |
+| Header control labels | "Focus Pane", "Close Pane" **[check]** | VoiceOver label and tooltip of the focus toggle and close button (§5); the pending-close value is "Closing" |
+
+The same internal type also holds the §4.3 semantic colours, the §6/§7 symbols and the §8 text styles, so no view spells them out.
 
 ## 4. Styles
 
@@ -58,9 +61,9 @@ Three style protocols (`PaneHeaderStyle`, `PaneDividerStyle`, `EmptyPaneStyle`, 
 |---|---|
 | Window background | Standard window background; no custom window material **[check]** |
 | Pane card | Content clipped to `RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous)`, opaque `.background(.background)`, inset by `metrics.contentPadding` |
-| Header row | Sits at the top of the card, no background of its own; a `Divider()`-style hairline in `Color(nsColor: .separatorColor)` below it |
-| Header controls | Title menu, toolbar items, overflow, focus and close use `.buttonStyle(.glass)` (pills), wrapped in **one** `GlassEffectContainer(spacing:)` per header; glass built from `glass.variant` and `glass.tint` |
-| Divider | The gap between cards (`2 × contentPadding`); a `dividerThickness` line in `Color(nsColor: .separatorColor)` appears on hover and while dragging, accent-coloured while dragging **[check]** |
+| Header row | Sits at the top of the card, no background of its own; a hairline of thickness `metrics.dividerThickness` in `Color(nsColor: .separatorColor)` below it |
+| Header controls | Title menu, toolbar items, overflow, focus and close use `.buttonStyle(.borderless)` (menus `.menuStyle(.borderlessButton)`) plus `.glassEffect(_:in: .capsule)` with the glass built from `glass.variant` and `glass.tint` and made `.interactive()`, all inside **one** `GlassEffectContainer(spacing:)` per header **[check]** |
+| Divider | The gap between cards (`2 × contentPadding`); a `dividerThickness` line in `Color(nsColor: .separatorColor)` appears on hover and while dragging, accent-coloured (`colors.activeIndicator`) while dragging **[check]** |
 | Drop overlay | `Material.thin` (`.thinMaterial`) in the card shape over the target zone, with the `dropHighlight` fill and stroke from §3 |
 | Empty pane / empty window | Centred symbol + title + **Add Content** button in `.buttonStyle(.glassProminent)` **[check]** |
 
@@ -70,9 +73,9 @@ Three style protocols (`PaneHeaderStyle`, `PaneDividerStyle`, `EmptyPaneStyle`, 
 |---|---|
 | Window background | Standard window background |
 | Pane card | Opaque `.background(.background)`, square corners (`cornerRadius` 0), flush (`contentPadding` 0) |
-| Header row | Opaque `Color(nsColor: .windowBackgroundColor)` with a hairline in `Color(nsColor: .separatorColor)` below |
+| Header row | Opaque `Color(nsColor: .windowBackgroundColor)` with a hairline of thickness `metrics.dividerThickness` in `Color(nsColor: .separatorColor)` below |
 | Header controls | `.buttonStyle(.borderless)`; menus `.menuStyle(.borderlessButton)`; no glass |
-| Divider | Always-visible `dividerThickness` line in `Color(nsColor: .separatorColor)`, accent-coloured while dragging |
+| Divider | Always-visible `dividerThickness` line in `Color(nsColor: .separatorColor)`, accent-coloured (`colors.activeIndicator`) while dragging |
 | Drop overlay | No material: `dropHighlight` fill and stroke from §3 only |
 | Empty pane / empty window | Centred symbol + title + **Add Content** button in `.buttonStyle(.borderedProminent)` |
 
@@ -97,7 +100,7 @@ No hard-coded RGB values anywhere in SplitKit.
 | Increase Contrast | The system raises glass and separator contrast | nothing; verified in the entry example |
 | Reduce Transparency | The system renders glass and materials opaque | nothing; verified in the entry example |
 | Reduce Motion | System animations and glass morphing reduce themselves; we only use `.smooth` | nothing |
-| VoiceOver | Every header control has a label (`title`); the active pane carries `.isSelected`; a pending close exposes the value "Closing"; drop targets are not the only way to move (menu commands exist) | labels and traits only |
+| VoiceOver | Every header control has a label (`title`); the active pane carries `.isSelected`; a pending close exposes the value "Closing"; the focus toggle exposes the value "On"/"Off"; drop targets are not the only way to move (menu commands exist) | labels and traits only |
 | Keyboard | Standard focus rings on header controls; no custom focus drawing | nothing |
 
 **No custom fallback code:** styles do not branch on `accessibilityReduceTransparency`, `colorSchemeContrast` or `accessibilityReduceMotion`. If the entry verification shows a setting is not honoured, that is a deviation report, not a silent workaround.
@@ -133,6 +136,8 @@ The element order and behaviour are in spec §7.1 and the layout and overflow ru
 | **Empty window** (no panes) | Same composition as the empty pane, centred in the window | same |
 | **Unavailable placeholder** | The type's symbol (or `questionmark.square.dashed` when unknown), the message from spec §8 in `.secondary`, **Restore** (`.glass`) and **Close** buttons | same with `.bordered` buttons |
 | **Focus mode** | The focused card fills the window; no extra decoration besides the toggled focus symbol | same |
+
+The **Drop target** overlay is rendered by the P3 drag chrome (drag targets), reading the same tokens (§3, §4); the header configuration carries `isDropTarget` for it.
 
 ## 8. Typography
 
@@ -175,3 +180,5 @@ Checked on the Phase 2 example screen and the first chrome build, in light and d
 8. `.glass` window background: standard, no custom window material
 9. Empty state: 28 pt symbol, `.title3` title, 8 pt spacing, `.glassProminent` Add button
 10. Drag handle symbol `line.3.horizontal`
+11. Header control labels "Focus Pane" and "Close Pane"
+12. `.glass` header controls: borderless buttons with token-driven interactive `glassEffect` capsules in one `GlassEffectContainer`
