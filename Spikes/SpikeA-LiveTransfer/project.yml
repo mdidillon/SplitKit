@@ -1,0 +1,29 @@
+name: SpikeALiveTransfer
+options:
+  deploymentTarget:
+    macOS: "26.0"
+packages:
+  SpikeA:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    GENERATE_INFOPLIST_FILE: YES
+    PRODUCT_BUNDLE_IDENTIFIER: com.mdidillon.SpikeALiveTransfer
+targets:
+  SpikeALiveTransfer:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/SpikeADemo
+    dependencies:
+      - package: SpikeA
+        product: SpikeACore
+schemes:
+  SpikeALiveTransfer:
+    build:
+      targets:
+        SpikeALiveTransfer: all

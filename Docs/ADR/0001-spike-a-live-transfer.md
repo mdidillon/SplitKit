@@ -3,7 +3,7 @@
 - **Status:** Proposed (awaiting Marc's Gate A decision and the manual checklist)
 - **Date:** 17 Oct 2026
 - **Phase:** P1, Spike A (spec §11, Gate A; §14 risk 1)
-- **Code:** `Spikes/SpikeA/` (standalone Swift package; no dependency on `SplitKit/` or `SplitKitViews/`)
+- **Code:** `Spikes/SpikeA-LiveTransfer/` (standalone Swift package; no dependency on `SplitKit/` or `SplitKitViews/`)
 - **Manual checklist:** `Docs/Manual/SpikeA-checklist.md`
 
 ## Context
@@ -22,7 +22,7 @@ Spec §14 risk 1: SwiftUI drag and drop is limited, so moving a *live* content o
 | `PaneHostView` | `Sources/SpikeACore/PaneHostView.swift` | One pane: header + body hosting at most one `ContentHostContainer` (which wraps the only `NSHostingView` for that content). `NSDraggingDestination`, drop highlight, drag placeholder, first-responder detection (incl. field editor) and handover. |
 | `PaneHeaderView` | `Sources/SpikeACore/PaneHeaderView.swift` | `NSDraggingSource` (4 pt threshold, in-app-only `.move`, private pasteboard type), "Move ⇥" button, click-to-focus. |
 | `TransferCoordinator` | `Sources/SpikeACore/TransferCoordinator.swift` | Content store, registry and panes. `beginTransfer` / `validateDrop` / `completeTransfer` / `cancelTransfer` / `endDrag` / `move` / `moveToOtherWindow`, and a `residue(windows:)` census. |
-| Demo | `Sources/SpikeADemo/SpikeADemoApp.swift` | Window A: Counter + 3D. Window B: two empty panes + a **Locked** pane (invalid drop target). *Pane ▸ Move to Other Window* (⌥⌘M), *Pane ▸ Residue Report…* (⌥⌘R). Logs every transfer to stdout. |
+| Demo | `Sources/SpikeADemo/SpikeADemoApp.swift` | Window A: Counter + 3D. Window B: two empty panes + a **Locked** pane (invalid drop target). *Pane ▸ Move to Other Window* (⌥⌘M; targets the first empty, drop-accepting pane of another window in pane creation order, never `HostID`/UUID order), *Pane ▸ Residue Report…* (⌥⌘R). Logs every transfer to stdout. |
 
 **Transfer order** (mirrors spec §6.2 "compute purely, then side effects"): validate against a copy of the registry → commit registry → uninstall source view (resigning first responder if it was inside) → install a fresh `NSHostingView` from `makeView()` for the **same object** in the destination → if the source held first responder, make the destination window key and give the responder to the content (first editable text field, or the pane itself for 3D) → verify single host. Every error is thrown before the first side effect.
 
@@ -30,7 +30,7 @@ Spec §14 risk 1: SwiftUI drag and drop is limited, so moving a *live* content o
 
 ## Evidence per Gate A criterion
 
-Automated: `cd Spikes/SpikeA && swift test` → 21 tests (24 cases), 0 failures, run on Xcode 27.1 / Swift 6.4. The window tests build two real `NSWindow`s (not ordered on screen) with real `NSHostingView`s and drive the real `NSDraggingDestination` methods through a fake `NSDraggingInfo`; only the mouse-driven `NSDraggingSession` itself cannot be created in a test.
+Automated: `cd Spikes/SpikeA-LiveTransfer && swift test` → 21 tests (24 cases), 0 failures, run on Xcode 27.1 / Swift 6.4. The window tests build two real `NSWindow`s (not ordered on screen) with real `NSHostingView`s and drive the real `NSDraggingDestination` methods through a fake `NSDraggingInfo`; only the mouse-driven `NSDraggingSession` itself cannot be created in a test.
 
 | # | Criterion | How verified | Automated test / manual check | Result |
 |---|---|---|---|---|
@@ -70,7 +70,7 @@ Automated: `cd Spikes/SpikeA && swift test` → 21 tests (24 cases), 0 failures,
 1. The `NSDraggingSession` itself (mouse-driven) can't be created in a test, so the header's `draggingSession(_:endedAt:operation:)` → `endDrag` link is only covered by reading the code and by the manual checklist. Everything after it is automated.
 2. A real drag across windows, key-window activation at drop time, the visual focus ring and 3D rendering after a move are **manual-pending**.
 3. Not covered: closing a window or quitting during a drag, app deactivation mid-drag, drags between Spaces or full-screen windows (single-screen setup, §13 remaining risk).
-4. The spike package is **not in CI** (changing `.github/workflows/ci.yml` was outside this task's scope). Proposed follow-up: add a `swift test` step for `Spikes/SpikeA`, or delete the spike after Gate A.
+4. The spike package is **not in CI** (changing `.github/workflows/ci.yml` was outside this task's scope). Proposed follow-up: add a `swift test` step for `Spikes/SpikeA-LiveTransfer`, or delete the spike after Gate A.
 5. The release-mode fallback of the double-host guard (refuse instead of trap) is implemented but not tested (tests run in debug).
 
 ## Deviations from the spec (spike-only)

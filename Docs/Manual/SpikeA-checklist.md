@@ -5,8 +5,8 @@ For Gate A (spec §11), together with `Docs/ADR/0001-spike-a-live-transfer.md`. 
 ## Setup
 
 ```sh
-cd Spikes/SpikeA
-swift run SpikeADemo
+cd Spikes/SpikeA-LiveTransfer
+swift run SpikeADemo (or open `Spikes/SpikeA-LiveTransfer/SpikeALiveTransfer.xcodeproj` in Xcode 27.1 and run the `SpikeALiveTransfer` scheme; the app bundle is preferred for real drag/activation behaviour)
 ```
 
 Two windows open:

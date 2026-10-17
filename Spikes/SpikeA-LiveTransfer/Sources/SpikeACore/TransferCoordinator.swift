@@ -21,6 +21,8 @@ public struct TransferOutcome: Equatable, Sendable {
     public private(set) var store: [ContentID: any SpikeContent] = [:]
     /// Weak: the windows own their views.
     private var panes: [HostID: WeakPane] = [:]
+    /// Pane creation order (`makePane` calls); the demo and tests lay panes out in this order.
+    private var paneOrder: [HostID] = []
     /// Demo: bring the destination window forward when the responder moves. Tests turn it off.
     public var activatesDestinationWindow = true
     public var logger: (@MainActor (String) -> Void)?
@@ -44,6 +46,7 @@ public struct TransferOutcome: Equatable, Sendable {
         try registry.addHost(pane.hostID, window: window, acceptsDrops: acceptsDrops)
         pane.coordinator = self
         panes[pane.hostID] = WeakPane(view: pane)
+        paneOrder.append(pane.hostID)
         return pane
     }
 
@@ -133,11 +136,12 @@ public struct TransferOutcome: Equatable, Sendable {
         }
     }
 
-    /// First empty, drop-accepting pane in another window.
+    /// First empty, drop-accepting pane in another window, in pane creation order. Deterministic:
+    /// `HostID` order is random (UUID), so it must not pick the target.
     public func targetInOtherWindow(for content: ContentID) -> HostID? {
         guard let source = registry.host(of: content), let window = registry.hosts[source]?.window else { return nil }
-        return registry.hosts.keys.sorted().first { host in
-            let info = registry.hosts[host]!
+        return paneOrder.first { host in
+            guard let info = registry.hosts[host] else { return false }
             return info.window != window && info.acceptsDrops && registry.content(in: host) == nil
         }
     }
