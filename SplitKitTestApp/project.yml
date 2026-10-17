@@ -1,0 +1,36 @@
+name: SplitKitTestApp
+options:
+  deploymentTarget:
+    macOS: "26.0"
+packages:
+  SplitKit:
+    path: ../SplitKit
+  SplitKitViews:
+    path: ../SplitKitViews
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    GENERATE_INFOPLIST_FILE: YES
+    PRODUCT_BUNDLE_IDENTIFIER: com.mdidillon.SplitKitTestApp
+targets:
+  SplitKitTestApp:
+    type: application
+    platform: macOS
+    sources: [Sources]
+    dependencies:
+      - package: SplitKit
+        product: SplitKit
+      - package: SplitKitViews
+        product: ImageViewer
+      - package: SplitKitViews
+        product: ModelViewer3D
+schemes:
+  SplitKitTestApp:
+    build:
+      targets:
+        SplitKitTestApp: all
+    run:
+      config: Debug

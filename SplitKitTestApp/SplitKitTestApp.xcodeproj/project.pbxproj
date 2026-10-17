@@ -1,0 +1,347 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3CF74568A6277F14AFD63E93 /* ModelViewer3D in Frameworks */ = {isa = PBXBuildFile; productRef = 42EE3C707DD453BDC2634E18 /* ModelViewer3D */; };
+		C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */; };
+		D95E076ABE4E9AB975F60C01 /* SplitKit in Frameworks */ = {isa = PBXBuildFile; productRef = 20706E733ECCACE11053B4F6 /* SplitKit */; };
+		FA64C5CECF3711617BDE9FF2 /* ImageViewer in Frameworks */ = {isa = PBXBuildFile; productRef = A24058AF5722475EDA33126F /* ImageViewer */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		3E17408EF3A72B7FDA664E7A /* SplitKitTestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SplitKitTestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		424B9E53FEE71C3F98C8ECF0 /* SplitKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SplitKit; path = ../SplitKit; sourceTree = SOURCE_ROOT; };
+		908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitKitTestApp.swift; sourceTree = "<group>"; };
+		ACAD58BEE9578365B50CB9D0 /* SplitKitViews */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SplitKitViews; path = ../SplitKitViews; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		355C02EED34484E5AB6BFF0A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D95E076ABE4E9AB975F60C01 /* SplitKit in Frameworks */,
+				FA64C5CECF3711617BDE9FF2 /* ImageViewer in Frameworks */,
+				3CF74568A6277F14AFD63E93 /* ModelViewer3D in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		224D526694B1F47F4F377051 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		696B98330494B79C154E631A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3E17408EF3A72B7FDA664E7A /* SplitKitTestApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D885D64A0F8C153BAEA314FA /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				424B9E53FEE71C3F98C8ECF0 /* SplitKit */,
+				ACAD58BEE9578365B50CB9D0 /* SplitKitViews */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		E6692134374938FD1838717F = {
+			isa = PBXGroup;
+			children = (
+				D885D64A0F8C153BAEA314FA /* Packages */,
+				224D526694B1F47F4F377051 /* Sources */,
+				696B98330494B79C154E631A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F173F0815D8FD55F923BFDE6 /* SplitKitTestApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DCBF393373F18AD41C059F37 /* Build configuration list for PBXNativeTarget "SplitKitTestApp" */;
+			buildPhases = (
+				4026B12EC628C973F3E294B5 /* Sources */,
+				355C02EED34484E5AB6BFF0A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SplitKitTestApp;
+			packageProductDependencies = (
+				20706E733ECCACE11053B4F6 /* SplitKit */,
+				A24058AF5722475EDA33126F /* ImageViewer */,
+				42EE3C707DD453BDC2634E18 /* ModelViewer3D */,
+			);
+			productName = SplitKitTestApp;
+			productReference = 3E17408EF3A72B7FDA664E7A /* SplitKitTestApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2F6B21191D17FE3922550417 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					F173F0815D8FD55F923BFDE6 = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 12C6C9534219CD8AB99013AF /* Build configuration list for PBXProject "SplitKitTestApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E6692134374938FD1838717F;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				68AC0710381B0CFEB5736233 /* XCLocalSwiftPackageReference "../SplitKit" */,
+				69E0384192941F1CEEE2DED8 /* XCLocalSwiftPackageReference "../SplitKitViews" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 696B98330494B79C154E631A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F173F0815D8FD55F923BFDE6 /* SplitKitTestApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4026B12EC628C973F3E294B5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		13D463BFD2BDC303E0581EA2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		3C1C668F4206C1511D90207F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mdidillon.SplitKitTestApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A693B409005F1F1F94F977FE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mdidillon.SplitKitTestApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		E3B9C9593031CD0A67E96CAD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		12C6C9534219CD8AB99013AF /* Build configuration list for PBXProject "SplitKitTestApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A693B409005F1F1F94F977FE /* Debug */,
+				3C1C668F4206C1511D90207F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DCBF393373F18AD41C059F37 /* Build configuration list for PBXNativeTarget "SplitKitTestApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E3B9C9593031CD0A67E96CAD /* Debug */,
+				13D463BFD2BDC303E0581EA2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		68AC0710381B0CFEB5736233 /* XCLocalSwiftPackageReference "../SplitKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../SplitKit;
+		};
+		69E0384192941F1CEEE2DED8 /* XCLocalSwiftPackageReference "../SplitKitViews" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../SplitKitViews;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		20706E733ECCACE11053B4F6 /* SplitKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SplitKit;
+		};
+		42EE3C707DD453BDC2634E18 /* ModelViewer3D */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ModelViewer3D;
+		};
+		A24058AF5722475EDA33126F /* ImageViewer */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ImageViewer;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 2F6B21191D17FE3922550417 /* Project object */;
+}

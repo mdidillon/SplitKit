@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 27.1 (R-TOOL)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.1.app
+          xcodebuild -version
+          if ! xcodebuild -version | head -n 1 | grep -q '^Xcode 27\.1$'; then
+            echo "::error::Active Xcode is not 27.1"
+            exit 1
+          fi
+
+      - name: Check tools version (R-TOOL)
+        run: |
+          for m in SplitKit/Package.swift SplitKitViews/Package.swift; do
+            if [ "$(head -n 1 "$m")" != "// swift-tools-version: 6.2" ]; then
+              echo "::error::$m must start with '// swift-tools-version: 6.2'"
+              exit 1
+            fi
+          done
+
+      - name: swift test (SplitKit)
+        run: swift test
+        working-directory: SplitKit
+
+      - name: swift test (SplitKitViews)
+        run: swift test
+        working-directory: SplitKitViews
+
+      - name: xcodebuild (SplitKitTestApp)
+        run: >
+          xcodebuild -project SplitKitTestApp/SplitKitTestApp.xcodeproj
+          -scheme SplitKitTestApp build CODE_SIGNING_ALLOWED=NO
