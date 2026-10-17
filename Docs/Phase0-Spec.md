@@ -3,7 +3,7 @@
 **Status: Approved — Revision 3 (16 Oct 2026), ready for Phase 1.**
 Revision 1 was approved on 16 Oct 2026. Revisions 2 and 3 resolve two external reviews that Marc accepted. Implementation starts with Phase 1 (§11).
 
-**Goal:** (1) get **SplitKit 100% right**, and (2) validate the spec → prototype process (Grok Bot coordinating Cursor).
+**Goal:** (1) get **SplitKit 100% right**, and (2) validate the spec → prototype process (Grok Bot coordinating Claude).
 
 ---
 
@@ -557,7 +557,7 @@ If a required item fails, Marc gets a deviation report. There is no silent switc
 | R-3D | Camera contract, corpus | §10 | Spike B gate + manual |
 | R-PROD | One product per view, clean consumer build | §2, §11 | per-product CI job |
 | R-TOOL | tools-version 6.2, Xcode 27.1 pinned in CI | §1 | CI check |
-- **Reporting** (every Cursor PR, verified by Grok Bot): the exact commands, exit codes, test counts (pass/fail/skip), coverage, known gaps, and the manual checks Marc needs to run. **Any deviation** from this spec gets a written deviation report and needs Marc's approval before merge. Nothing is claimed as working without evidence.
+- **Reporting** (every Claude PR, verified by Grok Bot): the exact commands, exit codes, test counts (pass/fail/skip), coverage, known gaps, and the manual checks Marc needs to run. **Any deviation** from this spec gets a written deviation report and needs Marc's approval before merge. Nothing is claimed as working without evidence.
 
 ## 14. Risks
 
@@ -566,13 +566,13 @@ If a required item fails, Marc gets a deviation report. There is no silent switc
 3. Real multi-monitor behaviour is verified only in simulation.
 4. The macOS 26 glass APIs or their accessibility behaviour may differ from this spec, which is checked by the P2 example.
 5. CI runner availability for Xcode 27.1.
-6. Cursor usage limits can pause implementation.
+6. Claude usage limits can pause implementation.
 
 ## 15. Process validation (Larevo question, filled in at the end)
 
 | Question | Evidence | Verdict |
 |---|---|---|
-| How far did Grok Bot + Cursor get from spec to working prototype without hand-coding? | _tbd_ | _tbd_ |
+| How far did Grok Bot + Claude get from spec to working prototype without hand-coding? | _tbd_ | _tbd_ |
 | Where was human help needed (reviews, manual tests, fixes, deviations)? | _tbd_ | _tbd_ |
 | Is local-model support still a differentiator for Larevo? | _tbd_ | _tbd_ |
 | What would a dedicated Larevo app add? Build, narrow or drop? | _tbd_ | _tbd_ |
