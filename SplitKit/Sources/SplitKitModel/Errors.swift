@@ -11,7 +11,7 @@ public enum LayoutError: Error, Equatable, Sendable {
     case windowNotEmpty(WindowID), mainWindowExists(WindowID), windowIDInUse(WindowID)
 }
 
-/// Thrown by `Migrator.decode` (part 2).
+/// Thrown by `Migrator.decode` (§8).
 public enum PersistenceError: Error, Equatable, Sendable {
     case unreadable(underlying: String), unsupportedFutureVersion(Int), migrationFailed(from: Int, reason: String)
     case invalid([InvariantViolation])        // fatal violations only

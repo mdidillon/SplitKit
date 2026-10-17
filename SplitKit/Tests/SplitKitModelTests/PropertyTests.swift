@@ -2,23 +2,7 @@ import Foundation
 import Testing
 @testable import SplitKitModel
 
-/// SplitMix64 driving the transaction generator. Choices use `next() % n` (not `Int.random(in:using:)`),
-/// so a seed reproduces the same sequence independently of the standard library's sampling algorithm.
-struct SplitMix64 {
-    var state: UInt64
-    mutating func next() -> UInt64 {
-        state &+= 0x9E37_79B9_7F4A_7C15
-        var z = state
-        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
-        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
-        return z ^ (z >> 31)
-    }
-    mutating func below(_ n: Int) -> Int { Int(next() % UInt64(n)) }
-    mutating func chance(_ percent: Int) -> Bool { below(100) < percent }
-    mutating func pick<T>(_ items: [T]) -> T? { items.isEmpty ? nil : items[below(items.count)] }
-}
-
-enum TxKind: String, CaseIterable {
+private enum TxKind: String, CaseIterable {
     case insert, insertIntoEmptyWindow, move, moveIntoEmptyWindow, reorder, resize
     case beginClose, commitClose, cancelClose, beginCloseWindow, commitCloseWindow, cancelCloseWindow
     case openMainWindow, setFocusMode, setActive, detach
@@ -80,9 +64,9 @@ enum TxKind: String, CaseIterable {
     }
 }
 
-struct Leaf { var pane: PaneID; var content: ContentID?; var window: WindowID }
+private struct Leaf { var pane: PaneID; var content: ContentID?; var window: WindowID }
 
-extension Session {
+private extension Session {
     var allLeaves: [Leaf] {
         windows.flatMap { w in (w.root?.leaves ?? []).map { Leaf(pane: $0.pane, content: $0.content, window: w.id) } }
     }
@@ -103,7 +87,7 @@ extension Session {
 }
 
 /// Generates random transactions, mostly valid, some deliberately invalid, against the current state.
-struct Fuzzer {
+private struct Fuzzer {
     var rng: SplitMix64
     var serial = 0
     let maxPanes = 24
@@ -210,7 +194,7 @@ struct Fuzzer {
     }
 }
 
-struct RunSummary: Equatable {
+private struct RunSummary: Equatable {
     var finalSession: Data
     var outcomes: [String]          // per step: "kind ok" or "kind error"
     var successes: [String: Int] = [:]
@@ -220,7 +204,7 @@ struct RunSummary: Equatable {
 
 /// Applies `count` random transactions from `seed` (driving both the generator and `SeededIDGenerator`).
 /// With `check`, asserts the §13 properties after every step.
-func propertyRun(seed: UInt64, count: Int, check: Bool) -> RunSummary {
+private func propertyRun(seed: UInt64, count: Int, check: Bool) -> RunSummary {
     var fuzzer = Fuzzer(seed: seed)
     var ids = SeededIDGenerator(seed: seed)
     var s = Session(windows: [mainWindow(1, nil)])
@@ -249,15 +233,26 @@ func propertyRun(seed: UInt64, count: Int, check: Bool) -> RunSummary {
             summary.outcomes.append("\(kind) \(error)")
             summary.errors[String(describing: error).prefix { $0 != "(" }.description, default: 0] += 1
         }
-        if check, step % 250 == 0 {
-            #expect(try! JSONDecoder().decode(Session.self, from: encoded(s)) == s, "step \(step): Codable round trip")
-        }
+        if check { checkRoundTrip(s, step: step) }
     }
     summary.finalSession = encoded(s)
     return summary
 }
 
-func checkSelfDrop(_ s: Session, _ rt: WorkspaceRuntime, _ fuzzer: inout Fuzzer, step: Int) {
+/// §13: encode → decode is identity (same session, no normalisations, same bytes on re-encode).
+private func checkRoundTrip(_ s: Session, step: Int) {
+    let bytes = encoded(s)
+    do throws(PersistenceError) {
+        let (decoded, normalizations) = try Migrator.decode(bytes)
+        #expect(decoded == s, "step \(step): encode → decode changed the session")
+        #expect(normalizations.isEmpty, "step \(step): decode normalised \(normalizations)")
+        #expect(encoded(decoded) == bytes, "step \(step): re-encode changed the bytes")
+    } catch {
+        Issue.record("step \(step): decode threw \(error)")
+    }
+}
+
+private func checkSelfDrop(_ s: Session, _ rt: WorkspaceRuntime, _ fuzzer: inout Fuzzer, step: Int) {
     guard let leaf = fuzzer.rng.pick(s.allLeaves.filter { $0.content != nil }) else { return }
     let edge = fuzzer.edge()
     var scratch = SequentialIDGenerator()
@@ -266,7 +261,7 @@ func checkSelfDrop(_ s: Session, _ rt: WorkspaceRuntime, _ fuzzer: inout Fuzzer,
     #expect(scratch.count == 0)
 }
 
-func checkSuccess(_ t: LayoutTransaction, _ kind: TxKind, before: Session, _ r: TransactionResult, step: Int) {
+private func checkSuccess(_ t: LayoutTransaction, _ kind: TxKind, before: Session, _ r: TransactionResult, step: Int) {
     let after = r.session
     // Tree validity, unique ownership, records (validate covers §6.1 entirely).
     let violations = SessionEngine.validate(after)

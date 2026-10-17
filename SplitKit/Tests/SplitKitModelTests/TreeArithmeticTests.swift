@@ -2,21 +2,6 @@ import Foundation
 import Testing
 @testable import SplitKitModel
 
-func approxEqual(_ a: [Double], _ b: [Double], tolerance: Double = 1e-12) -> Bool {
-    a.count == b.count && zip(a, b).allSatisfy { abs($0 - $1) <= tolerance }
-}
-
-func fractions(_ node: LayoutNode?) -> [Double] {
-    if case let .split(_, _, _, f) = node { return f }
-    return []
-}
-
-/// Removes a pane through the public two-stage close.
-func close(_ pane: PaneID, in s: Session) throws(LayoutError) -> TransactionResult {
-    let begun = try apply(.beginClose(pane), to: s)
-    return try apply(.commitClose(pane), to: begun.session, runtime: begun.runtime)
-}
-
 @Suite("§6.1.9 tree arithmetic")
 struct TreeArithmeticTests {
     @Test("Worked example: insert D right of A, close C, close D")

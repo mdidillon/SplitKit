@@ -2,13 +2,6 @@ import Foundation
 import Testing
 @testable import SplitKitModel
 
-let allEdges: [DropEdge] = [.left, .right, .top, .bottom, .center]
-func pendingPane(_ n: Int) -> WorkspaceRuntime { WorkspaceRuntime(pendingCloses: [pid(n)]) }
-func pendingWindow(_ n: Int) -> WorkspaceRuntime { WorkspaceRuntime(pendingWindowCloses: [wid(n)]) }
-
-/// H[A(c1), B(c2)] in main window 1, plus detached window 2 with C(c3).
-let twoWindows = session(mainWindow(1, h(1, [p(1, 1), p(2, 2)]), active: 1, focus: 1), detachedWindow(2, p(3, 3)))
-
 @Suite("§6.2 edge and centre insert")
 struct InsertTests {
     @Test func edgeInsertAppendsRecordAndClearsFocusMode() throws {

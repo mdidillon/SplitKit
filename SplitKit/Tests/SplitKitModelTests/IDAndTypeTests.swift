@@ -84,20 +84,6 @@ struct TypeTests {
         #expect(WorkspaceRuntime(activeDrag: drag) != WorkspaceRuntime())
     }
 
-    @Test("Codable round trip; split axis key stays `axis`; geometry as nested arrays")
-    func codableShape() throws {
-        var s = twoWindows
-        s.contents[1] = record(cid(2), state: Data([0xFF]), availability: .unavailable)
-        let data = encoded(s)
-        #expect(try JSONDecoder().decode(Session.self, from: data) == s)
-        let json = String(decoding: data, as: UTF8.self)
-        #expect(json.contains("\"axis\" : \"horizontal\""))
-        #expect(json.contains("\"split\" : {"))
-        #expect(json.contains("\"availability\" : \"unavailable\""))
-        let frame = String(decoding: try JSONEncoder().encode(placement.intendedFrame), as: UTF8.self)
-        #expect(frame == "[[0,0],[1200,800]]")
-    }
-
     @Test func versionStartsAtCurrent() {
         #expect(Session().version == Session.currentVersion)
         #expect(Session.currentVersion == 1)

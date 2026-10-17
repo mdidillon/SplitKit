@@ -14,7 +14,7 @@ let package = Package(
         .target(name: "SplitKitContent", dependencies: ["SplitKitModel"]),
         .target(name: "SplitKitWindows", dependencies: ["SplitKitModel"]),
         .target(name: "SplitKit", dependencies: ["SplitKitContent", "SplitKitWindows", "SplitKitModel"]),
-        .testTarget(name: "SplitKitModelTests", dependencies: ["SplitKitModel"]),
+        .testTarget(name: "SplitKitModelTests", dependencies: ["SplitKitModel"], exclude: ["Fixtures"]),
         .testTarget(name: "SplitKitContentTests", dependencies: ["SplitKitContent"]),
         .testTarget(name: "SplitKitWindowsTests", dependencies: ["SplitKitWindows"]),
         .testTarget(name: "SplitKitTests", dependencies: ["SplitKit"]),

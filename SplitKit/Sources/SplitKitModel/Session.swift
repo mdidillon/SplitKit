@@ -7,7 +7,7 @@ public indirect enum LayoutNode: Codable, Equatable, Sendable {
     case split(id: SplitID, axis: SplitAxis, children: [LayoutNode], fractions: [Double])
 }
 
-/// Where a window was last placed by the user (§9). `DisplayPlacement.resolve` is part 2.
+/// Where a window was last placed by the user (§9). Resolved against the current displays by `DisplayPlacement.resolve`.
 public struct SavedPlacement: Codable, Equatable, Sendable {
     public var intendedFrame: CGRect          // last frame the USER set, global space
     public var displayID: String?             // hint only
@@ -81,5 +81,15 @@ public struct ContentRecord: Codable, Equatable, Sendable {
         self.stateVersion = stateVersion
         self.state = state
         self.availability = availability
+    }
+
+    /// A missing `availability` key decodes as the declared default, `.hosted` (§5). Encoding always writes it.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(ContentID.self, forKey: .id)
+        type = try container.decode(ContentType.self, forKey: .type)
+        stateVersion = try container.decode(Int.self, forKey: .stateVersion)
+        state = try container.decode(Data.self, forKey: .state)
+        availability = try container.decodeIfPresent(Availability.self, forKey: .availability) ?? .hosted
     }
 }

@@ -13,7 +13,7 @@ struct ValidateTests {
     }
 
     @Test("Each violation is detected", arguments: ViolationCase.all)
-    func detects(c: ViolationCase) {
+    fileprivate func detects(c: ViolationCase) {
         #expect(SessionEngine.validate(c.input).contains(c.violation), "\(SessionEngine.validate(c.input))")
         #expect(c.violation.isFatal == c.fatal)
     }
@@ -28,7 +28,7 @@ struct ValidateTests {
     }
 }
 
-struct ViolationCase: Sendable, CustomTestStringConvertible {
+fileprivate struct ViolationCase: Sendable, CustomTestStringConvertible {
     var violation: InvariantViolation
     var fatal: Bool
     var input: Session
