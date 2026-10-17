@@ -69,7 +69,7 @@ Traceability (§13.1): R-TREE, R-TXN, R-CLOSE, R-PERSIST, R-WIN and R-TOOL rows 
 | Structure | `SplitKit/` and `SplitKitViews/` are separate, extractable Swift packages. `SplitKitTestApp/` is a plain **Xcode project**, used as both the test app and the integration sample. |
 | Views | One product per content view. First contents: **ImageViewer** (display only) and **ModelViewer3D** (glTF/GLB via **GLTFKit2 + RealityKit**; FBX out). |
 | Header | SplitKit owns it. **Focus toggle in the header**, no maximize button. |
-| Look | **Liquid Glass default** using native SwiftUI glass APIs and materials, plus environment design tokens. The Larevo screenshot (`assets/larevo-glass-reference.png`) is a **reference, not a clone**. |
+| Look | **Liquid Glass default** using native SwiftUI glass APIs and materials, plus environment design tokens. The Larevo screenshot (`Concept/larevo-glass-reference.png`) is a **reference, not a clone**. |
 | Lifecycle | Closing the last pane never quits the app (empty state with an Add button and a menu command). |
 | Monitors | Required. Marc tests on a single MacBook screen, so placement is a pure model tested over simulated displays (§9). |
 
@@ -93,8 +93,8 @@ SplitKit/                        (repo root)
 ├─ Spikes/                       Phase 1 throwaway code, never a dependency of any package
 │  ├─ SpikeA-LiveTransfer/       Xcode project: two windows, AppKit drag session (may use local SplitKit packages)
 │  └─ SpikeB-RealityKit/         Xcode project: GLTFKit2 + RealityKit only, no SplitKit (§10)
-├─ Docs/                         Phase0-Spec.md, Traceability.md, Manual/, assets/
-│  └─ ADR/                       NNNN-title.md, e.g. 0001-spike-a-live-transfer.md, 0002-spike-b-realitykit.md
+├─ Concept/                      concept art and visual references (e.g. larevo-glass-reference.png)
+├─ Docs/                         Phase0-Spec.md, Traceability.md, Manual/
 ├─ CLAUDE.md                     working rules for Claude (summarises §1, §3, §13; the spec wins on conflict)
 └─ .github/workflows/ci.yml
 ```
@@ -503,7 +503,7 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
   Any additions are reviewed as API changes.
 - **System appearance:** semantic colours only. Light/dark, the accent colour, Increase Contrast, Reduce Transparency and Reduce Motion are honoured through system behaviour, with no custom fallback code.
 - **Verification (Phase 2 entry):** a small example screen confirms the exact macOS 26 SDK glass APIs and their behaviour under Reduce Transparency, Increase Contrast and VoiceOver before chrome is built. Any API difference gets a deviation report.
-- **Visual reference:** `assets/larevo-glass-reference.png` shows dark translucent panels, soft gradient tints, rounded cards, compact pill chips and thin dividers. It is used to tune default tokens. **It is a reference, not a clone.**
+- **Visual reference:** `Concept/larevo-glass-reference.png` shows dark translucent panels, soft gradient tints, rounded cards, compact pill chips and thin dividers. It is used to tune default tokens. **It is a reference, not a clone.**
 
 ### 7.3 Focus model
 
@@ -594,7 +594,7 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
 | Product | Scope | Stack |
 |---|---|---|
 | **ImageViewer** | Display only: aspect-fit, no zoom/pan/rotate. It opens via the picker (file panel) or a dropped image. Unreadable file → `ContentError.unreadable`, shown in the pane. | SwiftUI `Image(nsImage:)`; no dependencies |
-| **ModelViewer3D** | **glTF + GLB only, FBX out.** The camera contract is below. | **GLTFKit2 → RealityKit**, in `RealityView`. The camera implementation is decided by Spike B. **GLTFKit2 pin:** Spike B records the exact release (or commit, if no release fits) in its ADR, and `SplitKitViews/Package.swift` uses `exact:` (or `revision:`) with that value; no version ranges |
+| **ModelViewer3D** | **glTF + GLB only, FBX out.** The camera contract is below. | **GLTFKit2 → RealityKit**, in `RealityView`. The camera implementation is decided by Spike B. **GLTFKit2 pin:** `exact: "0.5.15"`, set by Spike B (§11.1); `SplitKitViews/Package.swift` uses `exact:` with that value, no version ranges |
 
 **Why RealityKit:** SceneKit is soft-deprecated (WWDC25; maintenance only), which conflicts with the macOS 26 current-APIs rule. RealityKit can't load glTF natively, so GLTFKit2 (MIT, active, RealityKit converter reworked in 2026) is required.
 
@@ -632,13 +632,31 @@ If a required item fails, Marc gets a deviation report. There is no silent switc
 | Phase | Deliverables | Acceptance criteria |
 |---|---|---|
 | **P0 Spec lock** | This Revision 4 + traceability matrix skeleton (`Docs/Traceability.md`, seeded from §13.1 in the P1 skeleton PR) | Marc approves. Every requirement has an ID. |
-| **P1 Model + feasibility spikes** | Repo skeleton (2 packages, Xcode app, CI, `CLAUDE.md`, `Docs/Traceability.md`); full `SplitKitModel` (tree, transactions incl. §6.2 window transactions, validate, `IDGenerator`, migrations v0 → v1, DisplayPlacement); **Spike A** (`Spikes/SpikeA-LiveTransfer/`): cross-window live-content transfer (AppKit drag session; state, first responder/focus handover, cancel and failed drops, cleanup, single host); **Spike B** (`Spikes/SpikeB-RealityKit/`): RealityKit/GLTFKit2 standalone (§10), including the GLTFKit2 pin. ADRs go in `Docs/ADR/` | `SplitKitModel` line coverage ≥ 90% (measured per §13) plus property tests green. Spike A demo: a counter and a live 3D view move between two windows with state and responder intact, cancelled drops leave no residue, and there's never a double host (asserted). Spike B meets §10 spike items. Each spike ends in a written ADR with an explicit **go/no-go gate**:
+| **P1 Model + feasibility spikes** | Repo skeleton (2 packages, Xcode app, CI, `CLAUDE.md`, `Docs/Traceability.md`); full `SplitKitModel` (tree, transactions incl. §6.2 window transactions, validate, `IDGenerator`, migrations v0 → v1, DisplayPlacement); **Spike A** (`Spikes/SpikeA-LiveTransfer/`): cross-window live-content transfer (AppKit drag session; state, first responder/focus handover, cancel and failed drops, cleanup, single host); **Spike B** (`Spikes/SpikeB-RealityKit/`): RealityKit/GLTFKit2 standalone (§10), including the GLTFKit2 pin. Results are recorded in §11.1 | `SplitKitModel` line coverage ≥ 90% (measured per §13) plus property tests green. Spike A demo: a counter and a live 3D view move between two windows with state and responder intact, cancelled drops leave no residue, and there's never a double host (asserted). Spike B meets §10 spike items. Each spike ends in a written result (§11.1) with an explicit **go/no-go gate**:
 - **Gate A (live transfer):** go if every criterion passes. No-go → Marc decides between (a) commands-only detach/dock in v1, or (b) a redesign. P2 does not start until he decides.
 - **Gate B (3D):** go if the camera contract and the required §10 corpus rows pass. No-go → a deviation report with options. ModelViewer3D work is paused until Marc decides; SplitKit work continues. |
 | **P2 Usable split UI** | Rendering, dividers with minimum sizes, header (§7.1), content picker, empty state, two-stage close, focus mode, menus and shortcuts, `.glass` + `.plain` with tokens, persistence with atomic autosave, dummy contents (colour, counter) | A 2×2 and a 3-level mixed tree can be built by mouse and by keyboard only. Close confirmation can be declined, leaving no change. The last pane leaves the empty state and the app stays running. Relaunch restores everything; an invalid file → default layout + `.invalid` file kept. Glass/accessibility example verified. |
 | **P3 Detach, dock, displays** | Drag-out threshold, ghost window, dock targets, Detach / Move to Window / Dock Back, window close rules, placement with no drift, host-managed mode sample | The counter state survives every path. The simulated-display matrix passes. Single-screen manual checklist passes. The host-mode sample target works with persistence disabled. |
 | **P4 Real contents** | `ImageViewer`, `ModelViewer3D` products | The §10 corpus criteria are met. Each product works standalone, docked and detached. **A clean consumer test per product** (a fresh package depending on only that product builds and runs). |
 | **P5 Optional spatial** | Spatial presentation behind a toggle | With it off, behaviour is identical; the model is untouched; text stays legible. |
+
+### 11.1 Phase 1 spike results
+
+Both spikes ran on Xcode 27.1 (27A9275) / Swift 6.4 on Marc's Mac (macOS 27.0.1). The code stays in `Spikes/`, the hand checks are in `Docs/Manual/`. **Both gates are GO, conditional on Marc's manual checks**; a failed manual check turns that gate into NO-GO with the options below.
+
+**Spike A, live transfer (Gate A): GO, conditional on `Docs/Manual/SpikeA-checklist.md`.**
+- **Mechanism:** AppKit drag sessions. The pane header is the `NSDraggingSource` (4 pt threshold, in-app `.move` only, a private pasteboard type carrying IDs only); each pane is an `NSDraggingDestination`. `draggingSession(_:endedAt:operation:)` is the single cancel and cleanup point for Esc, drop-outside and refused drops. Drag and *Move to Other Window* share one coordinator transaction: validate on a copy, commit, then side effects.
+- **Re-hosting:** a fresh `NSHostingView` from `makeView()` for the same object; view-local `@State` resets (§6.4) and the old view deallocates. First responder is resigned in the source and handed to the content in the destination (key window + `makeFirstResponder`); focus detection must include the SwiftUI field editor.
+- **Evidence:** 21 automated tests with two real windows and the real drop-destination code. A counter and a live RealityKit view keep identity and state, the responder follows, cancelled and failed drops leave no residue (view census, registry bytes), a double host throws and traps in debug (exit tests), and 5,000-step random sequences keep one host. The destination pane is chosen in pane creation order.
+- **Spike-only simplifications** (not carried into product code): drops onto occupied panes are refused, since the §6.2 swap and edge split belong to the model and P3; spike-local `HostID`/`HostRegistry` stand in for the §5 types (P3 maps them).
+- **Manual-pending:** 3D rendering after a move, focus after a real mouse drag, real Esc / drop-outside / Locked-pane drops, drag feel. **Gaps:** the mouse-driven `NSDraggingSession` can't be created in a test; closing a window, quitting or deactivating mid-drag, Spaces and full screen are untested; the release-mode double-host fallback is untested. **NO-GO options:** (a) commands-only detach/dock in v1, (b) a redesign.
+
+**Spike B, GLTFKit2 → RealityKit (Gate B): GO, conditional on `Docs/Manual/SpikeB-checklist.md`** (camera on trackpad and mouse, PBR look).
+- **Pin:** GLTFKit2 `exact: "0.5.15"` (tag 2026-01-14, commit `e69e354`, binary xcframework with SwiftPM checksum).
+- **API on Xcode 27.1:** `try GLTFAsset(url:options:)`, then `GLTFRealityKitLoader.convert(scene: asset.defaultScene!, asset: asset)` (`@MainActor`; without `asset:` animations are lost). `try await GLTFRealityKitLoader.load(from:)` also works. Needs `@preconcurrency import GLTFKit2`.
+- **Camera: custom controller.** Native `CameraControls` is one mode per view (`.orbit`, `.pan`, `.tilt` or `.dolly`, not combinable) with no reset, no dolly clamp and no pose access, so it can't meet the contract. A camera entity driven by our orbit / pan / dolly / reset maths does: bounding-sphere framing, dolly clamped to [0.1·r, 10·framed distance], never through the target. Input: drag = orbit; ⇧-drag, middle-drag and trackpad scroll = pan; mouse wheel and pinch = dolly. **Open question:** whether macOS `RealityView` renders through the camera entity; fallback: apply the inverse camera transform to the scene root.
+- **Corpus, required rows:** bounding boxes 0.0000% off the reference, +Y up and node transforms exact; external `.bin`/textures and embedded GLB load with no missing textures; load ≤ 2 s (DamagedHelmet ≈ 150 ms); malformed, `.fbx`, missing `.bin` and Draco give typed errors, no crash. The PBR look is a manual check. **Optional rows:** skinning/animation plays, clearcoat is converted, morph targets and transmission are unsupported, Draco is refused, KTX2 is untested.
+- **Gaps and P4 risks:** the 2 Artifex exports are missing; GLTFKit2 can `fatalError` on unusual valid files (refuse e.g. `KHR_mesh_quantization` up front, validate accessors); conversion blocks the main actor (parse off-main); undecodable textures drop silently (keep the texture audit); a Magic Mouse scroll pans instead of zooming. Fixtures live in `Spikes/SpikeB-RealityKit/Fixtures` until P4 moves them. **NO-GO options:** the scene-root camera fallback, a different input mapping, or accepting PBR differences as documented gaps. No SceneKit switch.
 
 ## 12. Error model
 

@@ -5,7 +5,8 @@ import SpikeBCore
 
 let arguments = CommandLine.arguments
 let fixtures = URL(fileURLWithPath: arguments.count > 1 ? arguments[1] : "Fixtures")
-let output = URL(fileURLWithPath: arguments.count > 2 ? arguments[2] : "../../Docs/ADR/assets/spikeB/renders")
+let output = URL(fileURLWithPath: arguments.count > 2 ? arguments[2] : ".build/renders")
+try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 
 let models = [
     "DamagedHelmet/glTF-Binary/DamagedHelmet.glb",

@@ -19,7 +19,7 @@ enum Fixtures {
     static func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: url(path).path) }
 }
 
-/// One machine-greppable line per measurement, quoted in ADR 0002.
+/// One machine-greppable line per measurement, summarised in spec §11.1.
 func record(_ fields: KeyValuePairs<String, String>) {
     print("SPIKEB-RESULT " + fields.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
 }
@@ -255,7 +255,7 @@ struct CorpusTests {
     func dracoIsRefused(path: String) throws {
         try #require(Fixtures.exists(path), Fixtures.missingMessage)
         let url = Fixtures.url(path)
-        // What GLTFKit2 itself does with the file, recorded for the ADR.
+        // What GLTFKit2 itself does with the file, recorded for the spike results (spec §11.1).
         var rawOutcome = "parsed"
         do {
             let asset = try GLTFAsset(url: url, options: [:])

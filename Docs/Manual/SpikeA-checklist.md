@@ -1,6 +1,6 @@
 # Spike A manual checklist: cross-window live-content transfer
 
-For Gate A (spec §11), together with `Docs/ADR/0001-spike-a-live-transfer.md`. Run on the MacBook (trackpad; repeat items 1 and 3 with a mouse if you have one).
+For Gate A (spec §11), together with spec §11.1. Run on the MacBook (trackpad; repeat items 1 and 3 with a mouse if you have one).
 
 ## Setup
 

@@ -1,6 +1,6 @@
 # Spike B manual checklist (Gate B)
 
-Spec §10 camera contract and corpus, §11 Gate B. Decision record: `Docs/ADR/0002-spike-b-realitykit.md`.
+Spec §10 camera contract and corpus, §11 Gate B. Results: spec §11.1.
 
 **Tester:** Marc · **Machine:** MacBook (built-in trackpad) + an external mouse with a wheel and a middle button · **Date:** ____
 
@@ -30,7 +30,7 @@ Do every row on the **trackpad** and then on the **mouse**. Use DamagedHelmet, t
 
 | # | Action | Trackpad gesture | Mouse gesture | Expected | Trackpad | Mouse | Notes |
 |---|---|---|---|---|---|---|---|
-| 2.1 | View uses the custom camera | — | — | Opening a file frames the model. Gestures move the view. (If nothing moves, see ADR risk 3.) | | | |
+| 2.1 | View uses the custom camera | — | — | Opening a file frames the model. Gestures move the view. (If nothing moves, see the camera open question in spec §11.1.) | | | |
 | 2.2 | Orbit | One-finger click-drag | Left-drag | The model turns around its centre and keeps its apparent size. Drag right turns the model right. Vertical orbit stops before flipping over the top or bottom. | | | |
 | 2.3 | Pan (two-finger) | Two-finger scroll | — | The model slides with your fingers and doesn't rotate or change size. A later orbit pivots around the **new** centre. | | ➖ | |
 | 2.4 | Pan (⇧ drag) | ⇧ + click-drag | ⇧ + left-drag | Same as 2.3. | | | |
@@ -41,7 +41,7 @@ Do every row on the **trackpad** and then on the **mouse**. Use DamagedHelmet, t
 | 2.9 | Reset (toolbar) | Orbit + pan + zoom, then click **Reset Camera** | same | The view returns exactly to the framed start view: same angle, same centre (the pan is undone) and same size. | | | |
 | 2.10 | Reset (⌘0) | Orbit + pan + zoom, then press ⌘0 | same | Same as 2.9. | | | |
 | 2.11 | Window resize then ⌘0 | Make the window very wide or tall, then ⌘0 | same | The model fits the new shape and nothing is clipped. | | | |
-| 2.12 | Magic Mouse (if available) | — | Surface scroll | Note what happens: by design this pans rather than zooms (ADR risk 4). Say whether that's acceptable. | ➖ | | |
+| 2.12 | Magic Mouse (if available) | — | Surface scroll | Note what happens: by design this pans rather than zooms (spec §11.1). Say whether that's acceptable. | ➖ | | |
 
 ## 3. Native mode comparison (picker = Native …)
 
@@ -53,11 +53,11 @@ For each native mode, try every contract action. Record which ones work and how.
 | 3.2 | Native .pan | | | | | |
 | 3.3 | Native .tilt | | | | | |
 | 3.4 | Native .dolly | | | | | |
-| 3.5 | **Verdict:** can any single native mode satisfy all four actions? (ADR expects no.) | | | | | |
+| 3.5 | **Verdict:** can any single native mode satisfy all four actions? (Spec §11.1 expects no.) | | | | | |
 
 ## 4. PBR visual check vs reference
 
-Compare the live view (Custom mode, after ⌘0) and the offscreen renders in `Docs/ADR/assets/spikeB/renders/` with `Docs/ADR/assets/spikeB/reference/`. Lighting and angle will differ. Judge the materials: correct texture placement, metal vs non-metal areas, roughness, normal-map detail, emissive glow, colours not washed out or too dark.
+Compare the live view (Custom mode, after ⌘0) and the offscreen renders (`swift run SpikeBRender` in `Spikes/SpikeB-RealityKit` writes them to `.build/renders/`) with the Khronos reference screenshots in `Spikes/SpikeB-RealityKit/Fixtures/<Model>/screenshot/`. Lighting and angle will differ. Judge the materials: correct texture placement, metal vs non-metal areas, roughness, normal-map detail, emissive glow, colours not washed out or too dark.
 
 | # | Model | Expected | Result | Notes |
 |---|---|---|---|---|
@@ -82,7 +82,7 @@ Compare the live view (Custom mode, after ⌘0) and the offscreen renders in `Do
 |---|---|---|---|---|
 | 6.1 | Open CesiumMan.glb, click **Play Animations** | The figure walks and the skin deforms with the bones. | | |
 | 6.2 | Open RiggedSimple.glb, Play | The cylinder bends. | | |
-| 6.3 | Open AnimatedMorphCube.glb, Play | Expected: no morph motion (unsupported, ADR §4). Note what you see. | | |
+| 6.3 | Open AnimatedMorphCube.glb, Play | Expected: no morph motion (unsupported, spec §11.1). Note what you see. | | |
 | 6.4 | Open TransmissionTest.glb | Expected: transmissive parts are opaque (gap). Note it. | | |
 
 ## Sign-off

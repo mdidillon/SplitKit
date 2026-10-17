@@ -3,3 +3,9 @@ DerivedData/
 xcuserdata/
 .swiftpm/
 .DS_Store
+# coverage output
+*.profraw
+*.profdata
+*.lcov
+coverage/
+Docs/Coverage/
