@@ -16,7 +16,7 @@ struct PaneCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            headerStyle.makeBody(configuration: headerConfiguration)
+            header
             contentBody
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -48,35 +48,11 @@ struct PaneCardView: View {
 
     // MARK: Header
 
-    private var headerConfiguration: PaneHeaderConfiguration {
-        let metadata = content.flatMap(workspace.metadata(of:))
-        return PaneHeaderConfiguration(
-            title: title(metadata),
-            systemImage: content == nil ? nil : metadata?.systemImage,
-            showsFocusToggle: workspace.configuration.focusModeEnabled,
-            isActive: window.activePane == pane,
-            isPendingClose: workspace.runtime.pendingCloses.contains(pane),
-            isEmpty: content == nil,
-            isFocusMode: window.focusModePane == pane,
-            menu: AnyView(paneMenu),
-            toolbar: AnyView(EmptyView()),
-            toggleFocusMode: { workspace.send(.toggleFocusMode(pane)) },
-            close: { workspace.send(.closePane(pane)) })
-    }
-
-    /// The content's title; "Add Content" for an empty pane (spec §7.1); the type name for a placeholder.
-    private func title(_ metadata: ContentRegistry.Metadata?) -> String {
-        guard let content else { return ChromeText.addContent }
-        if let object = workspace.store[content] { return object.title }
-        return metadata?.displayName ?? workspace.record(content)?.type.raw ?? ChromeText.addContent
-    }
-
-    /// The structural items available now; the full pane menu (spec §7.1) comes with the header task.
-    @ViewBuilder private var paneMenu: some View {
-        Button(ChromeText.splitRight) { workspace.send(.split(pane, edge: .right)) }
-        Button(ChromeText.splitDown) { workspace.send(.split(pane, edge: .bottom)) }
-        Divider()
-        Button(SplitKitStyleConstants.Accessibility.closeLabel) { workspace.send(.closePane(pane)) }
+    /// The header through the style; right-click opens the same pane menu as the title ▾ (spec §7.1).
+    private var header: some View {
+        let configuration = workspace.headerConfiguration(for: pane, in: window, content: content)
+        return headerStyle.makeBody(configuration: configuration)
+            .contextMenu { configuration.menu }
     }
 
     // MARK: Placeholder

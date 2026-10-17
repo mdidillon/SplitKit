@@ -44,11 +44,20 @@ public struct PaneHeaderConfiguration {
 
     /// The items of the title ▾ menu (content picker / pane menu, spec §7.1).
     public let menu: Element
-    /// The content toolbar items, already laid out with their overflow (spec §7.4).
-    public let toolbar: Element
 
+    private let regionBuilder: @MainActor (AnyView, @escaping (Element) -> AnyView) -> AnyView
     private let toggleFocusModeAction: @MainActor () -> Void
     private let closeAction: @MainActor () -> Void
+
+    /// The flexible region between the icon and the focus toggle (spec §7.1.3–5, §7.4): the style's `title`
+    /// control, then the content toolbar items with their overflow ⋯. SplitKit measures and lays both out
+    /// together, because the title truncates before `.high` items collapse. `toolbar` draws the look's
+    /// treatment around the item group.
+    @MainActor public func titleAndToolbar<Title: View, Toolbar: View>(
+        title: Title, @ViewBuilder toolbar: @escaping (Element) -> Toolbar
+    ) -> some View {
+        regionBuilder(AnyView(title)) { AnyView(toolbar($0)) }
+    }
 
     /// Enters or leaves focus mode for this pane.
     @MainActor public func toggleFocusMode() { toggleFocusModeAction() }
@@ -58,7 +67,8 @@ public struct PaneHeaderConfiguration {
     @MainActor init(title: String, systemImage: String?, showsDragHandle: Bool = true, showsFocusToggle: Bool = true,
          isActive: Bool = false, isHovered: Bool = false, isDropTarget: Bool = false, isDraggedSource: Bool = false,
          isPendingClose: Bool = false, isEmpty: Bool = false, isFocusMode: Bool = false,
-         menu: AnyView, toolbar: AnyView,
+         menu: AnyView,
+         region: @escaping @MainActor (AnyView, @escaping (Element) -> AnyView) -> AnyView = { title, _ in title },
          toggleFocusMode: @escaping @MainActor () -> Void, close: @escaping @MainActor () -> Void) {
         self.title = title
         self.systemImage = systemImage
@@ -72,7 +82,7 @@ public struct PaneHeaderConfiguration {
         self.isEmpty = isEmpty
         self.isFocusMode = isFocusMode
         self.menu = Element(content: menu)
-        self.toolbar = Element(content: toolbar)
+        self.regionBuilder = region
         self.toggleFocusModeAction = toggleFocusMode
         self.closeAction = close
     }
@@ -187,12 +197,10 @@ struct BuiltInPaneHeader: View {
             }
             HeaderControlGroup(look: look) {
                 HStack(spacing: Constants.headerItemSpacing) {
-                    titleMenu
-                    Spacer(minLength: 0)
-                    configuration.toolbar
-                        .font(Constants.Typography.toolbarLabel)
-                        .headerControlGlass(look, tokens: tokens)
-                        .disabled(configuration.controlsDisabled)
+                    configuration.titleAndToolbar(title: titleMenu) { toolbar in
+                        toolbar.headerControlGlass(look, tokens: tokens)
+                    }
+                    .disabled(configuration.controlsDisabled)
                     if configuration.showsFocusToggle {
                         focusToggle
                     }

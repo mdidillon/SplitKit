@@ -39,6 +39,7 @@ Values every style needs but that are not public tokens. They live in **one inte
 | Header item spacing | 4 pt **[check]** | Space between header elements; also the `GlassEffectContainer(spacing:)` value |
 | Header control size | `.controlSize(.small)` | All header buttons, menus and toggles |
 | Header symbol scale | `.imageScale(.small)` | All header SF Symbols |
+| Header title minimum width | 64 pt **[check]** | Narrowest the title (middle-truncated) gets before `.high` toolbar items collapse into the overflow; below it the title is hidden (spec §7.4) |
 | Active indicator thickness | 2 pt **[check]** | Accent line along the top edge of the active pane's header (§7) |
 | Drop overlay fill opacity | 0.18 **[check]** | `colors.dropHighlight` fill over the target zone |
 | Drop overlay stroke | 2 pt **[check]** | `colors.dropHighlight` stroke around the target zone |
@@ -118,7 +119,8 @@ The element order and behaviour are in spec §7.1 and the layout and overflow ru
 | Content icon | The type's `systemImage`, `.secondary` when inactive, `.primary` when active |
 | Title + ▾ | Title text (§8) followed by `chevron.down` at the header symbol scale; the whole pill is the menu |
 | Toolbar items | Icon-only when a `systemImage` exists (title as tooltip and label), otherwise the title text |
-| Overflow | `ellipsis` |
+| Overflow | `ellipsis`, shown only when an item does not fit; its menu lists the collapsed items in declaration order (`.callout`) and never holds focus or close |
+| Title and toolbar region | Title pill and toolbar items share the flexible space between the icon and the focus toggle; items are right-aligned. Order of giving way as the row narrows: `.low` items, `.normal` items (later declared first), title truncation (middle) down to the title minimum width (§3), `.high` items, then the title itself |
 | Focus toggle | `arrow.up.left.and.arrow.down.right` to enter, `arrow.down.right.and.arrow.up.left` to exit focus mode |
 | Close | `xmark` |
 
@@ -180,6 +182,7 @@ Checked on the Phase 2 example screen and the first chrome build, in light and d
 8. `.glass` window background: standard, no custom window material
 9. Empty state: 28 pt symbol, `.title3` title, 8 pt spacing, `.glassProminent` Add button
 10. Drag handle symbol `line.3.horizontal`
-13. Empty window title copy "No Content"
 11. Header control labels "Focus Pane" and "Close Pane"
 12. `.glass` header controls: borderless buttons with token-driven interactive `glassEffect` capsules in one `GlassEffectContainer`
+13. Empty window title copy "No Content"
+14. Header title minimum width 64 pt

@@ -9,6 +9,7 @@ enum SplitKitStyleConstants {
     static let headerItemSpacing: CGFloat = 4
     static let headerControlSize: ControlSize = .small
     static let headerSymbolScale: Image.Scale = .small
+    static let headerTitleMinWidth: CGFloat = 64
     static let activeIndicatorThickness: CGFloat = 2
     static let dropOverlayFillOpacity: Double = 0.18
     static let dropOverlayStroke: CGFloat = 2
@@ -52,5 +53,6 @@ enum SplitKitStyleConstants {
         static let focusOffValue = "Off"
         static let focusToggleLabel = "Focus Pane"
         static let closeLabel = "Close Pane"
+        static let overflowLabel = "More"
     }
 }

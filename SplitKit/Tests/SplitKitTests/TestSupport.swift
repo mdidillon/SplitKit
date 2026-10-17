@@ -25,7 +25,7 @@ final class TestContent: PaneContent {
     }
 
     var title: String { "Test \(id.raw.uuidString.prefix(4))" }
-    var toolbarItems: [PaneToolbarItem] { [] }
+    var toolbarItems: [PaneToolbarItem] = []
     func makeView() -> AnyView {
         makeViewCalls += 1
         return AnyView(Color.clear)
@@ -70,14 +70,27 @@ extension SeededIDGenerator {
 /// A workspace with `TestContent` and `FailingContent` registered, seeded IDs, persistence disabled and
 /// the default layout open.
 @MainActor
-func makeWorkspace(seed: UInt64 = 0x5EED, persistence: SplitKitConfiguration.Persistence = .disabled) throws -> SplitKitWorkspace {
+func makeWorkspace(seed: UInt64 = 0x5EED, persistence: SplitKitConfiguration.Persistence = .disabled,
+                   focusModeEnabled: Bool = true) throws -> SplitKitWorkspace {
     let registry = ContentRegistry()
     try registry.register(TestContent.self)
     try registry.register(FailingContent.self)
-    let workspace = SplitKitWorkspace(registry: registry, configuration: SplitKitConfiguration(persistence: persistence),
+    let workspace = SplitKitWorkspace(registry: registry, configuration: SplitKitConfiguration(persistence: persistence, focusModeEnabled: focusModeEnabled),
                                       ids: SeededIDGenerator(seed: seed))
     _ = workspace.restoreOrOpenDefault()
     return workspace
+}
+
+extension SplitKitWorkspace {
+    /// The main window's layout.
+    var mainLayout: WindowLayout { windowLayout(mainWindow!)! }
+    /// The main window's panes with their contents, in tree order.
+    var mainLeaves: [(pane: PaneID, content: ContentID?)] { mainLayout.root?.leaves ?? [] }
+}
+
+/// A toolbar layout entry.
+func toolbarEntry(_ id: String, _ priority: PaneToolbarItem.Priority, _ width: CGFloat = 30) -> PaneToolbarLayout.Entry {
+    .init(id: id, priority: priority, width: width)
 }
 
 /// Hosts `view` in an `NSHostingView` of `size` and lays it out, so SwiftUI evaluates its body.
@@ -100,7 +113,10 @@ func headerConfiguration(title: String = "Counter", systemImage: String? = "numb
     PaneHeaderConfiguration(title: title, systemImage: systemImage, isActive: isActive, isHovered: isHovered,
                             isDropTarget: isDropTarget, isDraggedSource: isDraggedSource,
                             isPendingClose: isPendingClose, isEmpty: isEmpty, isFocusMode: isFocusMode,
-                            menu: AnyView(Button("Split Right") {}), toolbar: AnyView(Button("Reset Camera") {}),
+                            menu: AnyView(Button("Split Right") {}),
+                            region: { title, decorate in
+                                AnyView(HStack { title; decorate(.init(content: AnyView(Button("Reset Camera") {}))) })
+                            },
                             toggleFocusMode: toggleFocusMode, close: close)
 }
 

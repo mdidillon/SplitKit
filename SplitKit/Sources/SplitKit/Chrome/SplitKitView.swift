@@ -40,6 +40,9 @@ struct EmptyWindowView: View {
 enum ChromeText {
     static let addContent = "Add Content"
     static let emptyTitle = "No Content"
+    static let add = "Add"
+    static let detach = "Detach"
+    static let moveToWindow = "Move to Window"
     static let splitRight = "Split Right"
     static let splitDown = "Split Down"
     static let restore = "Restore"

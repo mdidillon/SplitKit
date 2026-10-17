@@ -106,7 +106,26 @@ public final class SplitKitWorkspace {
         commit(result)
     }
 
+    /// Adds a new `type` content in a new pane next to `pane`: `split` (an empty pane at `edge`), then
+    /// `addContent` into it. Composition of the two existing commands; if the add fails the empty pane stays.
+    func addContent(_ type: ContentType, besides pane: PaneID, edge: DropEdge) async throws(RegistryError) {
+        let before = Set(allLeaves.map(\.pane))
+        do {
+            try await perform(.split(pane, edge: edge))
+        } catch {
+            throw .creationFailed(type, .other("layout: \(error)"))
+        }
+        guard let new = allLeaves.first(where: { !before.contains($0.pane) })?.pane else {
+            throw .creationFailed(type, .other("layout: no new pane"))
+        }
+        try await addContent(type, url: nil, into: new)
+    }
+
     // MARK: Lookups
+
+    private var allLeaves: [(pane: PaneID, content: ContentID?)] {
+        session.windows.flatMap { $0.root?.leaves ?? [] }
+    }
 
     func windowLayout(_ id: WindowID) -> WindowLayout? {
         session.windows.first { $0.id == id }
