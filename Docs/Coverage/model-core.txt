@@ -1,0 +1,25 @@
+# SplitKitModel line coverage, P1 model part 1 (core), measured per spec §13
+# Local: Xcode 27.1 (27A9275), Swift 6.4 (swiftlang-6.4.0.34.1), macOS 27.0.1 dev Mac (target macOS 26)
+# cd SplitKit
+# swift test --enable-code-coverage
+# swift test --show-codecov-path   → .build/out/Products/Debug/codecov/SplitKit.json
+# xcrun llvm-cov report .build/out/Products/Debug/SplitKitModelTests.xctest/Contents/MacOS/SplitKitModelTests \
+#   -instr-profile=.build/out/Products/Debug/codecov/default.profdata --sources Sources/SplitKitModel/
+
+Filename                      Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+IDGenerator.swift                   7                 0   100.00%           5                 0   100.00%          22                 0   100.00%           0                 0         -
+Session.swift                       6                 0   100.00%           6                 0   100.00%          31                 0   100.00%           0                 0         -
+Transactions.swift                  4                 0   100.00%           4                 0   100.00%           8                 0   100.00%           0                 0         -
+Validate.swift                     62                 1    98.39%          19                 1    94.74%          68                 1    98.53%           0                 0         -
+Tree.swift                         90                15    83.33%          31                10    67.74%         126                10    92.06%           0                 0         -
+IDs.swift                          14                 0   100.00%           9                 0   100.00%          15                 0   100.00%           0                 0         -
+SessionEngine.swift               250                11    95.60%          62                 7    88.71%         345                 7    97.97%           0                 0         -
+Errors.swift                        5                 0   100.00%           1                 0   100.00%           6                 0   100.00%           0                 0         -
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TOTAL                             438                27    93.84%         137                18    86.86%         621                18    97.10%           0                 0         -
+
+# Gate (§11 P1): SplitKitModel line coverage ≥ 90% → 97.10%.
+# The 18 missed lines are 18 never-executed implicit closures (FNDA:0 in `llvm-cov export -format=lcov`):
+# autoclosures of preconditionFailure/assert messages for impossible paths, `?? default` / `[k, default:]`
+# arguments. `llvm-cov export -format=lcov` shows no source line with zero hits (no `DA:<line>,0`).
