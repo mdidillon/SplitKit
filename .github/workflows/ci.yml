@@ -38,6 +38,8 @@ jobs:
           fi
           echo "### Toolchain" >> "$GITHUB_STEP_SUMMARY"
           xcodebuild -version >> "$GITHUB_STEP_SUMMARY"
+          swift --version >> "$GITHUB_STEP_SUMMARY"
+          sw_vers >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check tools version (R-TOOL)
         run: |
