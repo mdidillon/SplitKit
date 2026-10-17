@@ -1,0 +1,29 @@
+name: SpikeBRealityKit
+options:
+  deploymentTarget:
+    macOS: "26.0"
+packages:
+  SpikeB:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    GENERATE_INFOPLIST_FILE: YES
+    PRODUCT_BUNDLE_IDENTIFIER: com.mdidillon.SpikeBRealityKit
+targets:
+  SpikeBRealityKit:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/SpikeBDemo
+    dependencies:
+      - package: SpikeB
+        product: SpikeBCore
+schemes:
+  SpikeBRealityKit:
+    build:
+      targets:
+        SpikeBRealityKit: all

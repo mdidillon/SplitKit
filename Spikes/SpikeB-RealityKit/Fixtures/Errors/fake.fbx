@@ -1,0 +1,2 @@
+Kaydara FBX Binary
+SpikeB hand-made fixture: not a real FBX file. FBX is out of scope (spec §10); the viewer must refuse it with a typed error.

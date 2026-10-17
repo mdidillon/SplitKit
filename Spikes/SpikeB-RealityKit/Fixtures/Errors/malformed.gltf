@@ -1,0 +1,5 @@
+{
+  "asset": { "version": "2.0", "generator": "SpikeB hand-made malformed fixture (truncated JSON)" },
+  "scene": 0,
+  "scenes": [ { "nodes": [ 0 ] } ],
+  "nodes": [ { "mesh": 0, "name": "Broken"

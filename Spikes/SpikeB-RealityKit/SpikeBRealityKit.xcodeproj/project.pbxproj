@@ -1,0 +1,335 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		35E1E42EFB7F4087393F539D /* SpikeBDemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464610279EA6C0E73C77D797 /* SpikeBDemoApp.swift */; };
+		57ADEC54FCE78E18C1E7C8C9 /* ViewerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48443B7C74A430621839637C /* ViewerModel.swift */; };
+		BA0BFB9DB11139F7710F011A /* CameraInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D9B3E765FA216292E1B0A11 /* CameraInputView.swift */; };
+		C1FF809FC5DA9208A872F4AD /* SpikeBCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5151348E9924247448086343 /* SpikeBCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		006F2BF2F33E51F60C33F9F4 /* SpikeB-RealityKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "SpikeB-RealityKit"; path = .; sourceTree = SOURCE_ROOT; };
+		464610279EA6C0E73C77D797 /* SpikeBDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpikeBDemoApp.swift; sourceTree = "<group>"; };
+		48443B7C74A430621839637C /* ViewerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewerModel.swift; sourceTree = "<group>"; };
+		6A95A5B7AA22007D7AA21C32 /* SpikeBRealityKit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SpikeBRealityKit.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D9B3E765FA216292E1B0A11 /* CameraInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraInputView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CBAF4C849D61B168348B6BC8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1FF809FC5DA9208A872F4AD /* SpikeBCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		28CBC80AB2BC2C23B1078300 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				006F2BF2F33E51F60C33F9F4 /* SpikeB-RealityKit */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		45CAC9818486E573641E1C05 /* SpikeBDemo */ = {
+			isa = PBXGroup;
+			children = (
+				7D9B3E765FA216292E1B0A11 /* CameraInputView.swift */,
+				464610279EA6C0E73C77D797 /* SpikeBDemoApp.swift */,
+				48443B7C74A430621839637C /* ViewerModel.swift */,
+			);
+			name = SpikeBDemo;
+			path = Sources/SpikeBDemo;
+			sourceTree = "<group>";
+		};
+		4979149BBF6A6C0D0A54EE9A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6A95A5B7AA22007D7AA21C32 /* SpikeBRealityKit.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8C50897BF0655D2A8588F5D5 = {
+			isa = PBXGroup;
+			children = (
+				28CBC80AB2BC2C23B1078300 /* Packages */,
+				45CAC9818486E573641E1C05 /* SpikeBDemo */,
+				4979149BBF6A6C0D0A54EE9A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0FA82E75A002B0BD55F5EE5A /* SpikeBRealityKit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 503EDA4A27415D119DB61C60 /* Build configuration list for PBXNativeTarget "SpikeBRealityKit" */;
+			buildPhases = (
+				008A2EBAF558BE2A1BE998F4 /* Sources */,
+				CBAF4C849D61B168348B6BC8 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SpikeBRealityKit;
+			packageProductDependencies = (
+				5151348E9924247448086343 /* SpikeBCore */,
+			);
+			productName = SpikeBRealityKit;
+			productReference = 6A95A5B7AA22007D7AA21C32 /* SpikeBRealityKit.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		91AD89C3E491D6BC790414C1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					0FA82E75A002B0BD55F5EE5A = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = C1888EF028E3FB2FD839C73C /* Build configuration list for PBXProject "SpikeBRealityKit" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 8C50897BF0655D2A8588F5D5;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				436CD9991291D54721BCFD7B /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4979149BBF6A6C0D0A54EE9A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0FA82E75A002B0BD55F5EE5A /* SpikeBRealityKit */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		008A2EBAF558BE2A1BE998F4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA0BFB9DB11139F7710F011A /* CameraInputView.swift in Sources */,
+				35E1E42EFB7F4087393F539D /* SpikeBDemoApp.swift in Sources */,
+				57ADEC54FCE78E18C1E7C8C9 /* ViewerModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		689FB0D39B15FAD09347B267 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mdidillon.SpikeBRealityKit;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		9F6E2DAFACD74413E0E9FBFB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		AD0BA6E8389C0BCAD5939CE3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		C786ADB519A68E623AF3A935 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mdidillon.SpikeBRealityKit;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		503EDA4A27415D119DB61C60 /* Build configuration list for PBXNativeTarget "SpikeBRealityKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F6E2DAFACD74413E0E9FBFB /* Debug */,
+				AD0BA6E8389C0BCAD5939CE3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C1888EF028E3FB2FD839C73C /* Build configuration list for PBXProject "SpikeBRealityKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				689FB0D39B15FAD09347B267 /* Debug */,
+				C786ADB519A68E623AF3A935 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		436CD9991291D54721BCFD7B /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5151348E9924247448086343 /* SpikeBCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SpikeBCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 91AD89C3E491D6BC790414C1 /* Project object */;
+}
