@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2AD4934BF3779F6470DEEAF4 /* GlassVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */; };
 		3CF74568A6277F14AFD63E93 /* ModelViewer3D in Frameworks */ = {isa = PBXBuildFile; productRef = 42EE3C707DD453BDC2634E18 /* ModelViewer3D */; };
 		C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */; };
 		D95E076ABE4E9AB975F60C01 /* SplitKit in Frameworks */ = {isa = PBXBuildFile; productRef = 20706E733ECCACE11053B4F6 /* SplitKit */; };
@@ -18,6 +19,7 @@
 		424B9E53FEE71C3F98C8ECF0 /* SplitKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SplitKit; path = ../SplitKit; sourceTree = SOURCE_ROOT; };
 		908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitKitTestApp.swift; sourceTree = "<group>"; };
 		ACAD58BEE9578365B50CB9D0 /* SplitKitViews */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SplitKitViews; path = ../SplitKitViews; sourceTree = SOURCE_ROOT; };
+		B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassVerificationView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,6 +39,7 @@
 		224D526694B1F47F4F377051 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */,
 				908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */,
 			);
 			path = Sources;
@@ -134,6 +137,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2AD4934BF3779F6470DEEAF4 /* GlassVerificationView.swift in Sources */,
 				C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

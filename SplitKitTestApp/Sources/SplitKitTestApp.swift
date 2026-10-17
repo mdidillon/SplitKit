@@ -11,5 +11,21 @@ struct SplitKitTestApp: App {
                 .padding()
                 .frame(minWidth: 400, minHeight: 200)
         }
+        Window("Glass & Accessibility Check", id: GlassVerificationCommands.windowID) {
+            GlassVerificationView()
+        }
+        .commands { GlassVerificationCommands() }
+    }
+}
+
+struct GlassVerificationCommands: Commands {
+    static let windowID = "glass-verification"
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(after: .windowArrangement) {
+            Button("Glass & Accessibility Check") { openWindow(id: Self.windowID) }
+                .keyboardShortcut("g", modifiers: [.command, .option])
+        }
     }
 }
