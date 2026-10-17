@@ -12,7 +12,7 @@ enum Fixtures {
 
     static func url(_ path: String) -> URL { root.appendingPathComponent(path) }
 
-    static let missingMessage: Comment = "Corpus missing: run ./scripts/fetch-corpus.sh in Spikes/SpikeB"
+    static let missingMessage: Comment = "Corpus missing: run ./scripts/fetch-corpus.sh in Spikes/SpikeB-RealityKit"
     static var corpusAvailable: Bool {
         FileManager.default.fileExists(atPath: url("DamagedHelmet/glTF-Binary/DamagedHelmet.glb").path)
     }

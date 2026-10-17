@@ -3,7 +3,7 @@
 - **Status:** Proposed. Waiting for Marc's manual checks and decision.
 - **Date:** 2026-10-17
 - **Spec:** Phase0-Spec §10 (ModelViewer3D, camera contract, Phase 1 3D spike, corpus), §11 P1 / Gate B, §13, §14 risk 2
-- **Code:** `Spikes/SpikeB/` (standalone Swift package; no dependency on `SplitKit/` or `SplitKitViews/`)
+- **Code:** `Spikes/SpikeB-RealityKit/` (standalone Swift package; no dependency on `SplitKit/` or `SplitKitViews/`)
 - **Toolchain used:** Xcode 27.1 (27A9275), Apple Swift 6.4 (swiftlang-6.4.0.34.1), `// swift-tools-version: 6.2`, Swift 6 language mode, `.macOS(.v26)`
 
 ## Context
@@ -94,7 +94,7 @@ Framing uses this distance, so the sphere fits the narrower FOV:
 
 ## 3. Corpus results (§10)
 
-The figures below were measured on this machine (local Mac in this session) by `swift test` in `Spikes/SpikeB`, from `SPIKEB-RESULT` lines:
+The figures below were measured on this machine (local Mac in this session) by `swift test` in `Spikes/SpikeB-RealityKit`, from `SPIKEB-RESULT` lines:
 
 - Load time = `GLTFAsset(url:options:)` + `convert(scene:asset:)`, on the main actor.
 - Box is the first model loaded in the process, so its time includes Metal/RealityKit warm-up.
@@ -166,7 +166,7 @@ The commit was verified from `Package.resolved`. The tag date comes from the tas
 ## 7. Deviations and gaps (for Marc's approval)
 
 - **`Spikes/` directory.** It is not in the §2 repo layout. It holds a standalone, throwaway package, as §10 asks ("standalone, no SplitKit"). P4 moves what's kept into `SplitKitViews/Sources/ModelViewer3D`.
-- **Fixture location.** Fixtures are under `Spikes/SpikeB/Fixtures` (7.0 MB, committed, licences in `Fixtures/LICENSES.md`), not `SplitKitViews/Tests/Fixtures`. P4 should move or re-fetch them there.
+- **Fixture location.** Fixtures are under `Spikes/SpikeB-RealityKit/Fixtures` (7.0 MB, committed, licences in `Fixtures/LICENSES.md`), not `SplitKitViews/Tests/Fixtures`. P4 should move or re-fetch them there.
 - **2 Artifex exports.** Not available. This corpus gap stays open until Marc supplies them.
 - **KTX2.** Not exercised by a test file.
 

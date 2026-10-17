@@ -1,15 +1,15 @@
 # Spike B manual checklist (Gate B)
 
-Spec §10 camera contract and corpus, §11 Gate B. Decision record: `Docs/ADR/0002-spike-b-gltfkit2-realitykit.md`.
+Spec §10 camera contract and corpus, §11 Gate B. Decision record: `Docs/ADR/0002-spike-b-realitykit.md`.
 
 **Tester:** Marc · **Machine:** MacBook (built-in trackpad) + an external mouse with a wheel and a middle button · **Date:** ____
 
 ## 0. Setup
 
 ```sh
-cd Spikes/SpikeB
+cd Spikes/SpikeB-RealityKit
 ./scripts/fetch-corpus.sh
-swift run SpikeBDemo                                              # empty window, File ▸ Open… (⌘O)
+swift run SpikeBDemo (or open `Spikes/SpikeB-RealityKit/SpikeBRealityKit.xcodeproj` in Xcode 27.1 and run the `SpikeBRealityKit` scheme for a real app bundle; GLTFKit2.framework is embedded)                                              # empty window, File ▸ Open… (⌘O)
 swift run SpikeBDemo Fixtures/DamagedHelmet/glTF-Binary/DamagedHelmet.glb   # opens a file directly
 ```
 

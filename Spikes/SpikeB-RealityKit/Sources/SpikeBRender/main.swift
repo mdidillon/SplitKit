@@ -1,5 +1,5 @@
 // Renders the PBR corpus offscreen for the §10 side-by-side evidence.
-// Usage (from Spikes/SpikeB): swift run SpikeBRender [Fixtures dir] [output dir]
+// Usage (from Spikes/SpikeB-RealityKit): swift run SpikeBRender [Fixtures dir] [output dir]
 import Foundation
 import SpikeBCore
 
