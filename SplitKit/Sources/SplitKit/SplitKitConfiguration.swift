@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 import SplitKitModel
 
 /// How a `SplitKitWorkspace` manages windows, persistence, detaching and pane sizes (§5).
@@ -14,6 +15,12 @@ public struct SplitKitConfiguration: Sendable {
     public var minimumPaneSize = CGSize(width: 160, height: 100)  // per-content minimumSize wins if larger
     public var focusModeEnabled = true
     public var autosaveDebounce: Duration = .seconds(1)
+    /// Lets a host wrap the content of every window SplitKit owns (`.splitKit` mode), e.g. to apply
+    /// `.paneHeaderStyle`, `.paneDividerStyle`, `.emptyPaneStyle`, `.splitKitTokens` or other environment
+    /// values. Receives the window's `SplitKitView`; nil (the default) leaves it unchanged. A `@MainActor`
+    /// function type is implicitly `Sendable`, so the struct stays `Sendable` (same pattern as
+    /// `WindowManagement.host(makeDetachedWindow:)`).
+    public var windowContent: (@MainActor (AnyView) -> AnyView)? = nil
 
     /// The memberwise initialiser the §5 declaration implies, with the §5 defaults.
     public init(windowManagement: WindowManagement = .splitKit,
@@ -22,7 +29,8 @@ public struct SplitKitConfiguration: Sendable {
                 undockThreshold: CGFloat = 40,
                 minimumPaneSize: CGSize = CGSize(width: 160, height: 100),
                 focusModeEnabled: Bool = true,
-                autosaveDebounce: Duration = .seconds(1)) {
+                autosaveDebounce: Duration = .seconds(1),
+                windowContent: (@MainActor (AnyView) -> AnyView)? = nil) {
         self.windowManagement = windowManagement
         self.persistence = persistence
         self.detach = detach
@@ -30,6 +38,7 @@ public struct SplitKitConfiguration: Sendable {
         self.minimumPaneSize = minimumPaneSize
         self.focusModeEnabled = focusModeEnabled
         self.autosaveDebounce = autosaveDebounce
+        self.windowContent = windowContent
     }
 }
 

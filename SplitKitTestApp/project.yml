@@ -23,6 +23,10 @@ targets:
     dependencies:
       - package: SplitKit
         product: SplitKit
+      - package: SplitKit
+        product: SplitKitContent
+      - package: SplitKit
+        product: SplitKitModel
       - package: SplitKitViews
         product: ImageViewer
       - package: SplitKitViews

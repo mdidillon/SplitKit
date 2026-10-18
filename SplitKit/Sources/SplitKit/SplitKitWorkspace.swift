@@ -40,12 +40,19 @@ public final class SplitKitWorkspace {
     @ObservationIgnored private var autosaveTask: Task<Void, Never>?
     @ObservationIgnored private let clock: any Clock<Duration>
     @ObservationIgnored private let encode: SessionWriter.Encode
+    /// The window layer: `CoordinatedWindows` in `.splitKit` mode, nil in `.host` mode (the host owns its
+    /// windows, §9). Tests that don't set one show no windows.
+    @ObservationIgnored var windowHost: (any WorkspaceWindowHost)?
+    /// The coordinator window that is key; runtime-only. The menu bar acts in it when no `SplitKitView`
+    /// publishes its window as the focused scene value.
+    private(set) var keyWindow: WindowID?
 
     public convenience init(registry: ContentRegistry, configuration: SplitKitConfiguration) throws(PersistenceError) {
         if case let .file(url) = configuration.persistence, !url.isFileURL {
             throw .unreadable(underlying: "persistence file \(url) is not a file URL")
         }
         self.init(registry: registry, configuration: configuration, ids: SystemIDGenerator())
+        if case .splitKit = configuration.windowManagement { windowHost = CoordinatedWindows(workspace: self) }
     }
 
     /// Tests inject a `SeededIDGenerator`, a clock for the autosave debounce and a failing encoder.
@@ -82,6 +89,12 @@ public final class SplitKitWorkspace {
             try await closePane(pane)
         case let .closeWindow(window):
             try await closeWindow(window)
+        case .newWindow:
+            if let main = mainWindow {
+                windowHost?.bringForward(main)
+            } else {
+                try commit(.openMainWindow(WindowID(raw: ids.next()), placement: .defaultMainWindow))
+            }
         }
     }
 
@@ -234,16 +247,35 @@ public final class SplitKitWorkspace {
         return result
     }
 
-    /// Commits a successful result, then runs its side effects: the views re-host from the new session,
-    /// then released contents get `willRelease()` and are dropped (§6.2, §6.3.2).
+    /// Commits a successful result, then runs its side effects in the §6.2 order: new windows open, the views
+    /// re-host from the new session, released contents get `willRelease()` and are dropped (§6.3.2), closed
+    /// windows close, then the snapshot: debounced, or at once when a window closed (§8).
     private func commit(_ result: TransactionResult, isSnapshotPoint: Bool = true) {
         session = result.session
         runtime = result.runtime
+        windowHost?.open(result.windowsCreated)
         for id in result.released {
             store.release(id)
             unavailableReasons[id] = nil
         }
-        if isSnapshotPoint { scheduleAutosave() }
+        windowHost?.close(result.windowsClosed)
+        guard isSnapshotPoint else { return }
+        if result.windowsClosed.isEmpty { scheduleAutosave() } else { enqueueSnapshot() }
+    }
+
+    // MARK: Windows (§9)
+
+    /// A user move or resize of a window SplitKit placed: its new placement, saved with the next snapshot.
+    /// The coordinator's own placement and the system's re-placement never arrive here (no drift).
+    func userPlaced(_ window: WindowID, _ placement: SavedPlacement) {
+        guard let index = session.windows.firstIndex(where: { $0.id == window }),
+              session.windows[index].placement != placement else { return }
+        session.windows[index].placement = placement
+        scheduleAutosave()
+    }
+
+    func keyWindowChanged(_ window: WindowID?) {
+        keyWindow = window
     }
 
     // MARK: Two-stage close (§6.3)
@@ -385,9 +417,7 @@ extension SplitKitWorkspace {
     public func saveNow() async throws(PersistenceError) {
         if let writeBlock { throw writeBlock }
         guard let writer else { return }
-        autosaveTask?.cancel()
-        autosaveTask = nil
-        writer.enqueue(snapshot())
+        enqueueSnapshot()
         await writer.idle()
         if let lastSaveError { throw lastSaveError }
     }
@@ -412,6 +442,8 @@ extension SplitKitWorkspace {
     // MARK: Restore pipeline
 
     private func resetForRestore() {
+        windowHost?.close(session.windows.map(\.id))
+        keyWindow = nil
         autosaveTask?.cancel()
         autosaveTask = nil
         writer = nil
@@ -505,6 +537,7 @@ extension SplitKitWorkspace {
             }
         }
         session = restored
+        windowHost?.open(restored.windows.map(\.id))
         return (report, needsSnapshot)
     }
 
@@ -557,7 +590,17 @@ extension SplitKitWorkspace {
             do { try await clock.sleep(for: delay) } catch { return }
             guard !Task.isCancelled, let self else { return }
             autosaveTask = nil
-            writer?.enqueue(snapshot())
+            enqueueSnapshot()
         }
+    }
+
+    /// Takes a snapshot and queues it for writing now, replacing a waiting autosave. Pending window
+    /// placements are handed over first, so the snapshot has them.
+    private func enqueueSnapshot() {
+        guard let writer, writeBlock == nil else { return }
+        windowHost?.flushPendingPlacements()
+        autosaveTask?.cancel()
+        autosaveTask = nil
+        writer.enqueue(snapshot())
     }
 }

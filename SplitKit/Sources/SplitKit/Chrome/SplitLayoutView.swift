@@ -17,7 +17,8 @@ struct SplitLayoutView: View {
             let bounds = CGRect(origin: .zero, size: proxy.size)
             let layout = SplitGeometry.focusing(
                 SplitGeometry.layout(root, in: bounds, dividerHitWidth: tokens.metrics.dividerHitWidth,
-                                     overrides: liveFractions, paneMinimum: paneMinimum),
+                                     overrides: liveFractions,
+                                     paneMinimum: { workspace.paneMinimum($0, tokens: tokens) }),
                 on: window.focusModePane, in: bounds)
             ZStack(alignment: .topLeading) {
                 ForEach(layout.panes, id: \.pane) { cell in
@@ -37,13 +38,6 @@ struct SplitLayoutView: View {
         }
     }
 
-    private func paneMinimum(_ content: ContentID?) -> CGSize {
-        SplitGeometry.cellMinimum(minimumPaneSize: workspace.configuration.minimumPaneSize,
-                                  contentMinimum: content.flatMap(workspace.metadata(of:))?.minimumSize,
-                                  headerHeight: tokens.metrics.headerHeight,
-                                  contentPadding: tokens.metrics.contentPadding)
-    }
-
     /// Mouse-up: one `resize` with the final fractions (none if unchanged), then the live override goes.
     private func endDrag(_ split: SplitID, fractions: [Double]?) {
         guard let fractions else {
@@ -54,5 +48,24 @@ struct SplitLayoutView: View {
             try? await workspace.perform(.resize(splitID: split, fractions: fractions))
             liveFractions[split] = nil
         }
+    }
+}
+
+extension SplitKitWorkspace {
+    /// The minimum layout cell of a pane hosting `content` (§6.1.4), with `tokens`' header and card inset.
+    func paneMinimum(_ content: ContentID?, tokens: SplitKitTokens) -> CGSize {
+        SplitGeometry.cellMinimum(minimumPaneSize: configuration.minimumPaneSize,
+                                  contentMinimum: content.flatMap(metadata(of:))?.minimumSize,
+                                  headerHeight: tokens.metrics.headerHeight,
+                                  contentPadding: tokens.metrics.contentPadding)
+    }
+
+    /// The window's `contentMinSize` (§6.1.4): the summed pane minimums of its tree; for the empty state,
+    /// one empty pane's. The split view fills the content area, so there is no further chrome to add.
+    /// Focus mode doesn't change it: the tree is untouched. Zero for a window not in the session.
+    func minimumContentSize(of window: WindowID, tokens: SplitKitTokens) -> CGSize {
+        guard let layout = windowLayout(window) else { return .zero }
+        guard let root = layout.root else { return paneMinimum(nil, tokens: tokens) }
+        return SplitGeometry.minimumSize(of: root) { paneMinimum($0, tokens: tokens) }
     }
 }

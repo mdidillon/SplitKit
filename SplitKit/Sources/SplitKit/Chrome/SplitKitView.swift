@@ -73,6 +73,8 @@ enum ChromeText {
     static let closeWindow = "Close Window"
     /// The title of ⌘W in a detached window with one pane (spec §7.5).
     static let closePaneAndWindow = "Close Pane and Window"
+    /// File ▸ New Window in `.splitKit` mode (spec §6.3.5).
+    static let newWindow = "New Window"
 
     static func direction(_ direction: FocusDirection) -> String {
         switch direction {

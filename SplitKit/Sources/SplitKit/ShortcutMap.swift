@@ -83,6 +83,10 @@ public struct ShortcutMap: Equatable, Sendable {
         .closeWindow: KeyboardShortcut("w", modifiers: [.command, .shift]),
     ])
 
+    /// File ▸ New Window (⌘N, the standard "New" shortcut). Not a `ShortcutCommand`: only `.splitKit` mode
+    /// has it, because there SplitKit owns the windows; in `.host` mode ⌘N stays the host's (`standardMacOS`).
+    static let newWindow = KeyboardShortcut("n", modifiers: .command)
+
     // MARK: Standard macOS shortcuts
 
     /// The standard macOS menu shortcuts SplitKit does not own (the default list for `conflicts(reserved:)`).

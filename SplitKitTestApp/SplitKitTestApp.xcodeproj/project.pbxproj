@@ -7,11 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0228D1E134037E3E928F9208 /* ModelViewer3D in Frameworks */ = {isa = PBXBuildFile; productRef = 42EE3C707DD453BDC2634E18 /* ModelViewer3D */; };
+		1DA76C6FB67F8BFEBB8C1FB1 /* ImageViewer in Frameworks */ = {isa = PBXBuildFile; productRef = A24058AF5722475EDA33126F /* ImageViewer */; };
 		2AD4934BF3779F6470DEEAF4 /* GlassVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */; };
-		3CF74568A6277F14AFD63E93 /* ModelViewer3D in Frameworks */ = {isa = PBXBuildFile; productRef = 42EE3C707DD453BDC2634E18 /* ModelViewer3D */; };
+		3CF74568A6277F14AFD63E93 /* SplitKitModel in Frameworks */ = {isa = PBXBuildFile; productRef = 6A45D1E6BD444D45483FD33E /* SplitKitModel */; };
+		A5E36B91D1B5BFA9EF7F3416 /* DummyContents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39FBA6F1CB9A71ACBE54725 /* DummyContents.swift */; };
 		C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */; };
 		D95E076ABE4E9AB975F60C01 /* SplitKit in Frameworks */ = {isa = PBXBuildFile; productRef = 20706E733ECCACE11053B4F6 /* SplitKit */; };
-		FA64C5CECF3711617BDE9FF2 /* ImageViewer in Frameworks */ = {isa = PBXBuildFile; productRef = A24058AF5722475EDA33126F /* ImageViewer */; };
+		FA64C5CECF3711617BDE9FF2 /* SplitKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 3D9D92CAF3B8B4C3D0718E04 /* SplitKitContent */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +23,7 @@
 		908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitKitTestApp.swift; sourceTree = "<group>"; };
 		ACAD58BEE9578365B50CB9D0 /* SplitKitViews */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SplitKitViews; path = ../SplitKitViews; sourceTree = SOURCE_ROOT; };
 		B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassVerificationView.swift; sourceTree = "<group>"; };
+		D39FBA6F1CB9A71ACBE54725 /* DummyContents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DummyContents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -28,8 +32,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				D95E076ABE4E9AB975F60C01 /* SplitKit in Frameworks */,
-				FA64C5CECF3711617BDE9FF2 /* ImageViewer in Frameworks */,
-				3CF74568A6277F14AFD63E93 /* ModelViewer3D in Frameworks */,
+				FA64C5CECF3711617BDE9FF2 /* SplitKitContent in Frameworks */,
+				3CF74568A6277F14AFD63E93 /* SplitKitModel in Frameworks */,
+				1DA76C6FB67F8BFEBB8C1FB1 /* ImageViewer in Frameworks */,
+				0228D1E134037E3E928F9208 /* ModelViewer3D in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -39,6 +45,7 @@
 		224D526694B1F47F4F377051 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D39FBA6F1CB9A71ACBE54725 /* DummyContents.swift */,
 				B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */,
 				908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */,
 			);
@@ -88,6 +95,8 @@
 			name = SplitKitTestApp;
 			packageProductDependencies = (
 				20706E733ECCACE11053B4F6 /* SplitKit */,
+				3D9D92CAF3B8B4C3D0718E04 /* SplitKitContent */,
+				6A45D1E6BD444D45483FD33E /* SplitKitModel */,
 				A24058AF5722475EDA33126F /* ImageViewer */,
 				42EE3C707DD453BDC2634E18 /* ModelViewer3D */,
 			);
@@ -137,6 +146,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5E36B91D1B5BFA9EF7F3416 /* DummyContents.swift in Sources */,
 				2AD4934BF3779F6470DEEAF4 /* GlassVerificationView.swift in Sources */,
 				C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */,
 			);
@@ -337,9 +347,17 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = SplitKit;
 		};
+		3D9D92CAF3B8B4C3D0718E04 /* SplitKitContent */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SplitKitContent;
+		};
 		42EE3C707DD453BDC2634E18 /* ModelViewer3D */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ModelViewer3D;
+		};
+		6A45D1E6BD444D45483FD33E /* SplitKitModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SplitKitModel;
 		};
 		A24058AF5722475EDA33126F /* ImageViewer */ = {
 			isa = XCSwiftPackageProductDependency;

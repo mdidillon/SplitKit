@@ -38,11 +38,17 @@ public struct SplitKitCommands: Commands {
         }
     }
 
-    private var model: PaneMenuModel { workspace.activePaneMenuModel(in: window) }
+    /// The key window's `SplitKitView`, or else the key coordinator window (`.splitKit` mode).
+    private var model: PaneMenuModel { workspace.activePaneMenuModel(in: window ?? workspace.keyWindow) }
 
     public var body: some Commands {
         CommandGroup(replacing: .saveItem) {}
         CommandGroup(after: .newItem) {
+            if case .splitKit = workspace.configuration.windowManagement {
+                // SplitKit owns the windows here, so it owns File ▸ New Window and its standard shortcut.
+                Button(ChromeText.newWindow) { workspace.send(.newWindow) }
+                    .keyboardShortcut(ShortcutMap.newWindow)
+            }
             PaneMenuEntry(workspace: workspace, model: model, action: .chooseContent, shortcuts: shortcuts)
         }
         CommandMenu(ChromeText.paneMenu) {

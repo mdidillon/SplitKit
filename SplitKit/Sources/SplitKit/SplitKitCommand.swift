@@ -20,4 +20,7 @@ public enum SplitKitCommand: Sendable {
     case closePane(PaneID)
     /// Two-stage close of a window: every hosted content is asked in tree order; one decline cancels (§6.3.4).
     case closeWindow(WindowID)
+    /// File ▸ New Window (§6.3.5): brings the main window forward, or opens one (`openMainWindow`) when
+    /// there is none.
+    case newWindow
 }

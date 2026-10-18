@@ -31,11 +31,11 @@ Deferred: terminal, code editor, browser, file browser, GitHub view.
 
 ## Getting started
 
-*(The packages and app are created in Phase 1.)*
-
 1. Clone: `git clone https://github.com/mdidillon/SplitKit.git`
 2. Open `SplitKitTestApp/SplitKitTestApp.xcodeproj` in Xcode 27.1+.
 3. Run the `SplitKitTestApp` scheme on macOS 26.
+
+The test app shows the split UI with two dummy contents (Colour and Counter) and saves its session to `~/Library/Application Support/com.mdidillon.SplitKitTestApp/SplitKit/session.json`. Pass the launch argument `-SplitKitPersistenceDisabled YES` to start from the default layout without reading or writing it, and `-SplitKitPlainStyle YES` to show `.plain` instead of `.glass`. Building and launching from Terminal, and the manual checks: `Docs/SplitUI-checklist.md`.
 
 To use SplitKit in your own app, add the `SplitKit` package (and any `SplitKitViews` products you need) through Swift Package Manager. Create a `ContentRegistry`, register your contents, and create a `SplitKitWorkspace`. Then either let SplitKit manage windows, or embed `SplitKitView` in your own. See spec §5 (API) and §9 (window ownership).
 

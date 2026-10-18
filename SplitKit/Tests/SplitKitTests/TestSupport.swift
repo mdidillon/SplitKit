@@ -230,6 +230,30 @@ final class MemoryStore: SessionStore, @unchecked Sendable {
     }
 }
 
+/// A window layer that records what the workspace asks of it, in order, and can hold back placements
+/// like the coordinator's coalescing.
+@MainActor
+final class RecordingWindowHost: WorkspaceWindowHost {
+    enum Call: Equatable {
+        case open([WindowID]), close([WindowID]), bringForward(WindowID)
+    }
+
+    /// Every non-empty call, oldest first.
+    private(set) var calls: [Call] = []
+    /// What `flushPendingPlacements()` hands to `deliver`.
+    var pendingPlacements: [(WindowID, SavedPlacement)] = []
+    var deliver: ((WindowID, SavedPlacement) -> Void)?
+
+    func open(_ windows: [WindowID]) { if !windows.isEmpty { calls.append(.open(windows)) } }
+    func close(_ windows: [WindowID]) { if !windows.isEmpty { calls.append(.close(windows)) } }
+    func bringForward(_ window: WindowID) { calls.append(.bringForward(window)) }
+    func flushPendingPlacements() {
+        let pending = pendingPlacements
+        pendingPlacements = []
+        for (window, placement) in pending { deliver?(window, placement) }
+    }
+}
+
 /// Runs `body` with a fresh temporary directory and deletes it afterwards.
 nonisolated(nonsending) func withTemporaryDirectory<T>(_ body: (URL) async throws -> T) async throws -> T {
     let directory = FileManager.default.temporaryDirectory.appending(path: "SplitKitTests-\(UUID().uuidString)", directoryHint: .isDirectory)
