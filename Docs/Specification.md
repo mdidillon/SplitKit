@@ -175,6 +175,7 @@ public enum LayoutTransaction: Sendable {
     case beginClose(PaneID)                                             // stage 1, see §6.3
     case commitClose(PaneID)                                            // stage 2
     case cancelClose(PaneID)
+    case commitReplace(PaneID, with: NewContent)                        // stage 2 alternative: replace content in place (§6.3.6)
     case beginCloseWindow(WindowID)                                     // §6.3.4
     case commitCloseWindow(WindowID)
     case cancelCloseWindow(WindowID)
@@ -352,6 +353,7 @@ public enum RegistryError: Error, Sendable {
     public func restoreOrOpenDefault() -> RestoreReport                      // .splitKit mode
     public func perform(_ command: SplitKitCommand) async throws(LayoutError)
     public func addContent(_ type: ContentType, url: URL?, into: PaneID?) async throws(RegistryError)
+    @discardableResult public func replaceContent(_ pane: PaneID, with type: ContentType, url: URL?) async throws(RegistryError) -> Bool  // false = declined (§6.3.6)
     public func restoreUnavailable(_ id: ContentID) throws(RegistryError)    // placeholder ▸ Restore
     public private(set) var runtime: WorkspaceRuntime
     public func saveNow() async throws(PersistenceError)
@@ -395,8 +397,9 @@ public protocol SessionStore: Sendable {
 public protocol PaneHeaderStyle { associatedtype Body: View; func makeBody(configuration: PaneHeaderConfiguration) -> Body }
 public protocol PaneDividerStyle { associatedtype Body: View; func makeBody(configuration: PaneDividerConfiguration) -> Body }
 public protocol EmptyPaneStyle  { associatedtype Body: View; func makeBody(configuration: EmptyPaneConfiguration) -> Body }
+public protocol DropOverlayStyle { associatedtype Body: View; func makeBody(configuration: DropOverlayConfiguration) -> Body }  // zone (edge or centre), card shape; built-ins .glass/.plain
 public struct SplitKitTokens: Sendable { /* token groups, names, types and defaults: Docs/Design.md */ }
-// Modifiers: .paneHeaderStyle(_:) .paneDividerStyle(_:) .emptyPaneStyle(_:) .splitKitTokens(_:)
+// Modifiers: .paneHeaderStyle(_:) .paneDividerStyle(_:) .emptyPaneStyle(_:) .dropOverlayStyle(_:) .splitKitTokens(_:)
 // Built-in styles and their looks: Docs/Design.md
 ```
 
@@ -425,7 +428,7 @@ public struct SplitKitTokens: Sendable { /* token groups, names, types and defau
 | Transaction | Preconditions | Result | Content ownership | Failure cases |
 |---|---|---|---|---|
 | **Edge insert** (`insert`, edge ≠ center) | Target pane exists; the content ID has no record yet | The target becomes a split (or joins the parent split if it's the same axis, with flattening) and the new pane gets half the target's fraction (§6.1.9) | A `ContentRecord` is appended (§6.5); the new content is hosted; nothing is released | `unknownPane`, `contentAlreadyHosted`, `paneClosePending`, `windowClosePending` |
-| **Center insert** | Target pane is **empty** | The content goes into the empty pane | Record appended; hosted | `centerInsertIntoOccupiedPane` (to replace, use the content picker: insert new, then a two-stage close of the old) |
+| **Center insert** | Target pane is **empty** | The content goes into the empty pane | Record appended; hosted | `centerInsertIntoOccupiedPane` (to replace, use *Replace Content…*, §6.3.6) |
 | **Insert into empty window** (`insertIntoEmptyWindow`) | `.main` window with `root == nil` | `root = .pane(newPaneID, content)`; `activePane` = that pane | Record appended (if content) | `unknownWindow`, `windowNotEmpty` (root ≠ nil, or a detached window), `contentAlreadyHosted` |
 | **Self-drop** (`move` with T == S, any edge **or** centre) | The content is hosted in S | **Always a no-op**, even if S is pending close: the unchanged session, no normalisations, no callbacks, no snapshot | Unchanged | `unknownContent` if the content isn't hosted anywhere; nothing else |
 | **Edge move** (`move`, edge ≠ center) | Content hosted in source pane S ≠ target T | S is removed (collapse/flatten), then an edge insert at T (move + split) | Same `ContentID`; no release | `unknownContent`, `unknownPane`, `paneClosePending` |
@@ -458,6 +461,7 @@ The engine computes everything purely first; side effects happen only after succ
 3. **While pending:** any transaction that touches P (move, swap, detach, a resize of its parent, a second close) throws `paneClosePending`, except a self-drop on P, which stays a no-op (§6.2). UI drags from P are disabled. Transactions elsewhere proceed normally, because P's `PaneID` is stable.
 4. **Closing a window with N contents:** `beginCloseWindow(W)` adds W to `WorkspaceRuntime.pendingWindowCloses` (tree unchanged); it throws `paneClosePending` if any pane in W is already pending. While W is pending, every transaction touching W or its panes throws `windowClosePending`. SplitKit asks each hosted content in tree order (depth-first) with `shouldClose()`; `.unavailable` placeholders and empty panes are not asked `shouldClose()`. **Window prompt (decided 18 Oct 2026):** N = the number of panes with content in W (hosted or placeholder; empty panes never count). With N ≥ 2, SplitKit first shows one prompt "Close window with N panes?" (§7.5); *Cancel* ends the close with nothing closed and nobody asked. With N = 1 no window prompt is shown. If **any declines**, `cancelCloseWindow(W)` and **nothing is closed**. If all accept, `commitCloseWindow(W)` removes W, releases all its contents and removes their records in one transaction. A window with no hosted content commits without asking.
 5. **Last pane of a main window** → `root = nil` (empty state); the app stays alive. **Last content of a detached window** → the window closes (§6.1.6). Closing the last window keeps the app running (zero windows is valid); *File ▸ New Window* brings the main window forward if one exists, otherwise applies `openMainWindow`.
+6. **Replace Content** (*Pane ▸ Replace Content…*, decided 18 Oct 2026): one step that reuses the picker and the two-stage close. The picker (same component as Add Content) chooses the type and, for file contents, the URL. SplitKit first creates the new object via `ContentRegistry.make(…, url:)` (validation up front; a failure throws `RegistryError` and changes nothing). Then `beginClose(P)` and `shouldClose()` run exactly as in steps 1–3. **Declined →** `cancelClose(P)` and the new object is dropped without `willRelease()`. **Accepted →** `commitReplace(P, with: NewContent)`: P keeps its `PaneID`, position and fraction; the old record is removed and `released = [old]`, the new record is appended and hosted; one snapshot. Preconditions: P is pending close and hosts content (`.unavailable` included, confirmed by SplitKit's own prompt); failures `unknownPane`, `noCloseInProgress` (P not pending), `unknownContent` (P empty), `contentAlreadyHosted` (new ID already has a record); a failed commit leaves session and runtime unchanged.
 
 ### 6.4 State ownership
 
@@ -523,8 +527,9 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
 | Split Right / Split Down | ⌘D / ⇧⌘D |
 | Move active pane focus | ⌥⌘ ← → ↑ ↓ |
 | Move pane to edge | ⌃⌥⌘ ← → ↑ ↓ |
-| Focus Pane (toggle) | ⌃⌘F |
-| Detach Pane | ⌥⌘D |
+| Focus Pane (toggle) | ⇧⌘↩ (was ⌃⌘F, which collides with macOS *Enter Full Screen*; changed 18 Oct 2026) |
+| Detach Pane | ⇧⌥⌘D (was ⌥⌘D, which collides with macOS *Turn Dock Hiding On/Off*; changed 18 Oct 2026) |
+| Replace Content… | none (Pane menu only) |
 | Close Pane | ⌘W (closes the pane; the window closes only when it has no panes) |
 | Close Window | ⇧⌘W |
 
@@ -582,6 +587,10 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
   - The **actual frame** is the resolved result.
   - Only user-initiated moves and resizes (and detach placement) update `intendedFrame`. System-forced re-placement after a display change **does not overwrite it**, so reconnecting the monitor returns windows to their intended spot.
 - **Detach:** dragging a header more than `undockThreshold` pt outside the window shows a ghost window; release creates the window there. *Pane ▸ Detach* places the window offset by 24 pt from the source, then resolved. Escape or a drop outside any valid target **cancels** with no change. A drop over an invalid target is a cancel too.
+- **Dock targets and drop zones** (decided 18 Oct 2026): while a header drag is in progress, every pane of every SplitKit window is a target. The card's edge halves are edge moves, the centre is a swap (§6.2), and an empty main window accepts `moveIntoEmptyWindow`. The overlay is drawn by `DropOverlayStyle`. A drop on the source pane is the self-drop no-op. Within `undockThreshold` outside the source window with no target, the drop cancels. `Detach.commandOnly` disables only the drag-out (docking drags between windows still work); `Detach.disabled` also hides Detach and Move to Window.
+- **Move to Window ▸** (decided 18 Oct 2026): the submenu lists every other window (main first, then detached windows in `windows` order, each titled by its active content). Choosing one is a cross-window `move` as a `.right` edge insert next to that window's active pane (or its last pane in tree order if none is active), or `moveIntoEmptyWindow` for an empty main window. A detached source window left without content closes (§6.1.6).
+- **Dock Back** (decided 18 Oct 2026): *Window ▸ Dock Back*, the pane menu in a detached window, and the close prompt's *Dock Back Instead* all move every content of the detached window into the main window, in tree order, each with the Move to Window rule. If no main window exists, `openMainWindow` (default placement) comes first. The whole sequence is applied on a working copy and committed once (one snapshot); any failure leaves everything unchanged.
+- **Closing a detached window** with the red close button is *Close Window* (§6.3.4, §7.5), including *Dock Back Instead*.
 
 ## 10. Content: first two products
 
@@ -659,6 +668,42 @@ Both spikes ran on Xcode 27.1 (27A9275) / Swift 6.4 on Marc's Mac (macOS 27.0.1)
 - **Camera: custom controller** (*approved by Marc 17 Oct 2026*). Native `CameraControls` is one mode per view (`.orbit`, `.pan`, `.tilt` or `.dolly`, not combinable) with no reset, no dolly clamp and no pose access, so it can't meet the contract. A camera entity driven by our orbit / pan / dolly / reset maths does: bounding-sphere framing, dolly clamped to [0.1·r, 10·framed distance], never through the target. Input: drag = orbit; ⇧-drag, middle-drag and trackpad scroll = pan; mouse wheel and pinch = dolly. **Open question:** whether macOS `RealityView` renders through the camera entity; fallback: apply the inverse camera transform to the scene root.
 - **Corpus, required rows:** bounding boxes 0.0000% off the reference, +Y up and node transforms exact; external `.bin`/textures and embedded GLB load with no missing textures; load ≤ 2 s (DamagedHelmet ≈ 150 ms); malformed, `.fbx`, missing `.bin` and Draco give typed errors, no crash. The PBR look is a manual check. **Optional rows:** skinning/animation plays, clearcoat is converted, morph targets and transmission are unsupported, Draco is refused, KTX2 is untested.
 - **Gaps and P4 risks:** the 2 Artifex exports are missing; GLTFKit2 can `fatalError` on unusual valid files (refuse e.g. `KHR_mesh_quantization` up front, validate accessors); conversion blocks the main actor (parse off-main); undecodable textures drop silently (keep the texture audit); a Magic Mouse scroll pans instead of zooming. Fixtures live in `Spikes/SpikeB-RealityKit/Fixtures` until P4 moves them. **NO-GO options:** the scene-root camera fallback, a different input mapping, or accepting PBR differences as documented gaps. No SceneKit switch.
+
+### 11.2 Phase 2 results and decisions
+
+Decided 18 Oct 2026. Q1 and Q2 by Marc; the rest by Grok Bot on Marc's instruction ("decide every open question with your own recommendation and record it in the spec").
+
+**Decisions:**
+1. **Q1 window-close prompt:** every pane with content counts toward N (§6.3.4, §7.5).
+2. **Q2 URL at creation:** `PaneContent.init(id:url:restoring:stateVersion:)`; `make(…, url:)` forwards it and the content validates up front (§5, §6.5).
+3. **P3 semantics left open:** dock targets, Move to Window, Dock Back and detached-window close (§9).
+4. **Q3 Replace Content:** one-step command reusing the picker and two-stage close, new `commitReplace` transaction (§6.3.6).
+5. **Drop overlay:** implemented in P3 and styled through the new `DropOverlayStyle` protocol with `.glass`/`.plain` built-ins (§5, `Docs/Design.md` §7).
+6. **Shortcut clashes:** Focus Pane ⇧⌘↩ and Detach Pane ⇧⌥⌘D (§7.5).
+7. **`Docs/Design.md` [check] values:** kept unchanged as the v1 defaults; they stay marked until Marc's visual check.
+
+**Approved P2 deviations:**
+1. `SplitKitCommand` declared (§5 only names it).
+2. `ShortcutMap` declared.
+3. `addContent` maps `LayoutError` into `RegistryError.creationFailed(.other)`.
+4. Toolbar overflow order: low → normal → title truncation → high → title hidden; at minimum width the pane menu is right-click only.
+5. `PaneHeaderConfiguration.titleAndToolbar` replaces `toolbar`.
+6. Built-in style type names (`GlassPaneHeaderStyle` etc.).
+7. `SplitKitConfiguration.dividerHitWidth` removed (duplicated the token).
+8. `.glass` header controls use borderless buttons plus `glassEffect` (`GlassButtonStyle(_:)` needs macOS 26.1).
+9. No `.splitKitStyle` style-set convenience.
+10. `restoreOrOpenDefaultAsync()` for custom stores.
+11. Save failures reported as `PersistenceError.unreadable("save failed: …")`.
+12. Public `SessionStoreConformance.check` and `saveBeforeQuit(timeout:)`.
+13. `SplitKitCommands` replaces File ▸ Save to own ⌘W.
+14. `SplitKitCommand.newWindow` and File ▸ New Window (⌘N) in `.splitKit` mode.
+15. A window move or resize is a snapshot point.
+16. Menu-bar commands fall back to the key coordinator window.
+17. `SplitKitConfiguration.windowContent` hook.
+18. Invalid-file copies also for corrupt, unreadable and migration-failed files.
+19. Extra `import UniformTypeIdentifiers`.
+20. Public `PaneToolbarItem` init.
+21. The checklist's `open` command uses `--stdout "$(tty)"`.
 
 ## 12. Error model
 

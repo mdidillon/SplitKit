@@ -141,7 +141,7 @@ The element order and behaviour are in spec §7.1 and the layout and overflow ru
 | **Close confirmation** | System alert (§4.3): the window prompt "Close window with N panes?" with **Close All** and **Cancel**, or "Close ‹Type›?" with **Close** and **Cancel** for an unavailable placeholder; shown on the window of the pane. While it is open the pane (or every pane of the window) is in the pending-close state above | same |
 | **Focus mode** | The focused card fills the window; no extra decoration besides the toggled focus symbol | same |
 
-The **Drop target** overlay is rendered by the P3 drag chrome (drag targets), reading the same tokens (§3, §4); the header configuration carries `isDropTarget` for it.
+The **Drop target** overlay is rendered by the P3 drag chrome through `DropOverlayStyle` (spec §5; built-ins `.glass` per §4.1 and `.plain` per §4.2, set with `.dropOverlayStyle(_:)`), reading the same tokens (§3, §4); the header configuration carries `isDropTarget` for it.
 
 ## 8. Typography
 
@@ -173,6 +173,9 @@ Title truncation follows spec §7.4.
 ## 11. Values that need Marc's visual check
 
 Checked on the Phase 2 example screen and the first chrome build, in light and dark:
+
+*Decision 18 Oct 2026:* all values below are kept unchanged as the v1 defaults; the marks stay until Marc's visual check.
+
 
 1. `metrics.cornerRadius` (10 pt `.glass`, 0 pt `.plain`)
 2. `metrics.contentPadding` (4 pt `.glass`)
