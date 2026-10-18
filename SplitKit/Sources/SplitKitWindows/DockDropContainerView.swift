@@ -74,9 +74,13 @@ import SplitKitModel
         (event == .leftMouseDragged || event == nil) && pasteboardTypes?.contains(where: draggedTypes.contains) == true
     }
 
+    /// The types on the system dragging pasteboard, read by the overlay's hit test. Tests replace it, since the
+    /// real pasteboard keeps the payload of the last drag on the machine.
+    package var dragPasteboardTypes: @MainActor () -> [NSPasteboard.PasteboardType]? = { NSPasteboard(name: .drag).types }
+
     override package func hitTest(_ point: NSPoint) -> NSView? {
         guard isOverlay else { return super.hitTest(point) }
-        let drag = Self.isDropInFlight(event: NSApp?.currentEvent?.type, pasteboardTypes: NSPasteboard(name: .drag).types)
+        let drag = Self.isDropInFlight(event: NSApp?.currentEvent?.type, pasteboardTypes: dragPasteboardTypes())
         return drag ? super.hitTest(point) : nil
     }
 

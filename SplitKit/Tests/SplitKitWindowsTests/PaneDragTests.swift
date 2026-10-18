@@ -182,8 +182,12 @@ private let windowFrame = CGRect(x: 100, y: 100, width: 400, height: 300)
         #expect(overlay.draggingEntered(info) == .move && overlay.performDragOperation(info))
         #expect(delegate.performed == [delegate.target!])
 
-        // No drag in flight (the real drag pasteboard holds no pane payload here): clicks pass through.
+        // No drag in flight (the drag pasteboard holds no pane payload): clicks pass through.
+        overlay.dragPasteboardTypes = { [.string] }
         #expect(overlay.hitTest(CGPoint(x: 10, y: 10)) == nil)
+        // A pane payload with no event being handled counts as a drag in flight: the overlay takes the hit.
+        overlay.dragPasteboardTypes = { [.splitKitPane] }
+        #expect(overlay.hitTest(CGPoint(x: 10, y: 10)) === overlay)
         #expect(container(delegate).isOverlay == false)
     }
 
