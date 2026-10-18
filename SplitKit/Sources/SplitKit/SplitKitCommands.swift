@@ -7,8 +7,8 @@ extension FocusedValues {
     @Entry var splitKitWindow: WindowID?
 }
 
-/// The menu bar commands of SplitKit (spec §5, §7.5): File ▸ Add Content…, the Pane menu and Window ▸ Close
-/// Window. Every item renders the same `PaneMenuModel` as the pane menu, for the active pane of the key
+/// The menu bar commands of SplitKit (spec §5, §7.5): File ▸ Add Content…, the Pane menu and Window ▸ Dock
+/// Back and Close Window. Every item renders the same `PaneMenuModel` as the pane menu, for the active pane of the key
 /// window (the `splitKitWindow` focused value), so titles, enabled states and actions cannot differ.
 ///
 /// It replaces File ▸ Close (⌘W) and, with it, whatever else SwiftUI places in `CommandGroupPlacement.saveItem`:
@@ -55,6 +55,7 @@ public struct SplitKitCommands: Commands {
             PaneMenu(workspace: workspace, model: model, scope: .menuBar(shortcuts))
         }
         CommandGroup(after: .windowArrangement) {
+            PaneMenuEntry(workspace: workspace, model: model, action: .dockBack, shortcuts: shortcuts)
             PaneMenuEntry(workspace: workspace, model: model, action: .closeWindow, shortcuts: shortcuts)
         }
     }

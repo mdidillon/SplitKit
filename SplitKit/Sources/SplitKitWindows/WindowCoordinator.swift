@@ -24,8 +24,12 @@ import SplitKitModel
     /// The coordinator window that became key, or nil when one stopped being key.
     package var onKeyWindowChange: (@MainActor (WindowID?) -> Void)?
 
+    static let styleMask: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .resizable]
+
     private struct Entry {
         let window: NSWindow
+        /// False for a window the host created (`.host` mode): its placement is reported, its frame never set (§9).
+        let ownsFrame: Bool
         var placement: SavedPlacement
         var writeBack: PlacementWriteBack
     }
@@ -60,22 +64,28 @@ import SplitKitModel
     package var windowIDs: Set<WindowID> { Set(entries.keys) }
 
     /// Creates the window `id`, places it and makes it key. An open `id` is only brought forward.
-    package func open(_ id: WindowID, placement: SavedPlacement, contentMinSize: CGSize) {
+    /// With `hostWindow` (`.host` mode, `makeDetachedWindow`), that window gets the content and delegate but
+    /// its frame is left to the host (§9: SplitKit only sets frames on windows it created).
+    package func open(_ id: WindowID, placement: SavedPlacement, contentMinSize: CGSize, hostWindow: NSWindow? = nil) {
         guard entries[id] == nil else {
             bringForward(id)
             return
         }
-        let window = NSWindow(contentRect: placement.intendedFrame,
-                              styleMask: [.titled, .closable, .miniaturizable, .resizable],
-                              backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.isRestorable = false
-        window.tabbingMode = .disallowed
-        window.title = ProcessInfo.processInfo.processName
+        let window: NSWindow
+        if let hostWindow {
+            window = hostWindow
+        } else {
+            window = NSWindow(contentRect: placement.intendedFrame, styleMask: Self.styleMask, backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.isRestorable = false
+            window.tabbingMode = .disallowed
+            window.title = ProcessInfo.processInfo.processName
+        }
         window.contentView = makeContentView(id)
         window.contentMinSize = contentMinSize
         window.delegate = self
-        entries[id] = Entry(window: window, placement: placement, writeBack: PlacementWriteBack(displays: displays()))
+        entries[id] = Entry(window: window, ownsFrame: hostWindow == nil, placement: placement,
+                            writeBack: PlacementWriteBack(displays: displays()))
         place(id)
         window.makeKeyAndOrderFront(nil)
     }
@@ -112,7 +122,7 @@ import SplitKitModel
 
     /// Sets the window's frame to its resolved saved placement (§9).
     private func place(_ id: WindowID) {
-        guard let entry = entries[id] else { return }
+        guard let entry = entries[id], entry.ownsFrame else { return }
         let window = entry.window
         let minimum = window.frameRect(forContentRect: CGRect(origin: .zero, size: window.contentMinSize)).size
         let frame = DisplayPlacement.resolve(entry.placement, minSize: minimum, displays: displays())

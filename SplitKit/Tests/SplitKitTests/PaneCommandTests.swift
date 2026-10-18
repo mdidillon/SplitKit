@@ -98,9 +98,13 @@ import SplitKitModel
         #expect(workspace.mainLeaves.count == 2)
     }
 
-    @Test func detachIsOffUntilPhase3() async throws {
+    @Test func detachNeedsAPaneWithContent() async throws {
+        #expect(!model.isEnabled(.detach), "no pane in the empty window")
         await workspace.addContentByKeyboard(in: main)
-        #expect(!model.isEnabled(.detach))
+        #expect(model.isEnabled(.detach) && model.isEnabled(.replaceContent))
+        try await workspace.perform(.split(try #require(workspace.mainLeaves.first?.pane), edge: .right))
+        try await workspace.perform(.setActive(workspace.mainLeaves[1].pane, in: main))
+        #expect(!model.isEnabled(.detach) && !model.isEnabled(.replaceContent), "an empty pane has nothing to detach or replace")
         let before = try Migrator.encode(workspace.session)
         await workspace.key(.detach, in: main)
         #expect(try Migrator.encode(workspace.session) == before)
@@ -134,7 +138,7 @@ import SplitKitModel
         await workspace.addContentByKeyboard(in: main)
         let first = workspace.mainLeaves[0].pane
         try await workspace.perform(.setActive(first, in: main))
-        await workspace.key(.toggleFocusMode, in: main)     // ⌃⌘F
+        await workspace.key(.toggleFocusMode, in: main)     // ⇧⌘↩
         #expect(workspace.mainLayout.focusModePane == first && workspace.mainLayout.activePane == first)
         #expect(workspace.mainLeaves.count == 2, "the tree is untouched")
         await workspace.key(.toggleFocusMode, in: main)

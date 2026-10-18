@@ -63,6 +63,8 @@ struct Transition {
             try commitClose(pane)
         case let .cancelClose(pane):
             try cancelClose(pane)
+        case let .commitReplace(pane, content):
+            try commitReplace(pane, with: content)
         case let .beginCloseWindow(window):
             try beginCloseWindow(window)
         case let .commitCloseWindow(window):
@@ -329,6 +331,19 @@ struct Transition {
         try requireNotPending(window: location.window)
         guard runtime.pendingCloses.contains(pane) else { throw .noCloseInProgress(pane) }
         runtime.pendingCloses.remove(pane)
+    }
+
+    /// §6.3.6: the pane keeps its ID, position and fraction; the old record is released, the new one appended.
+    mutating func commitReplace(_ pane: PaneID, with content: NewContent) throws(LayoutError) {
+        let location = try requirePane(pane)
+        try requireNotPending(window: location.window)
+        guard runtime.pendingCloses.contains(pane) else { throw .noCloseInProgress(pane) }
+        guard let old = location.content else { throw .unknownContent(.emptyPane) }
+        try requireNoRecord(content)
+        runtime.pendingCloses.remove(pane)
+        setContent(content.id, at: location)
+        removeRecord(old)
+        appendRecord(content)
     }
 
     mutating func beginCloseWindow(_ window: WindowID) throws(LayoutError) {

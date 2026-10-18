@@ -58,7 +58,8 @@ import SplitKitModel
         #expect(workspace.runtime.pendingCloses == [pane])
         #expect(header(pane).isPendingClose && !header(other.pane).isPendingClose)
         let model = menu(pane)
-        let actions: [PaneMenuModel.Action] = [.addContent(TestContent.type), .split(.right), .split(.bottom), .detach, .moveToWindow, .closePane]
+        let actions: [PaneMenuModel.Action] = [.addContent(TestContent.type), .replaceContent, .split(.right), .split(.bottom), .detach,
+                                               .moveToWindow(workspace.mainLayout.id), .dockBack, .closePane]
         #expect(actions.allSatisfy { !model.isEnabled($0) })
         #expect(!model.picker.isEnabled)
         #expect(header(pane).controlsDisabled)

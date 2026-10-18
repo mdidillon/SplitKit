@@ -13,6 +13,8 @@ struct ContentPicker {
         case emptyPane(PaneID)
         /// A new pane at `edge` of an occupied pane.
         case besides(PaneID, DropEdge)
+        /// Replace Content… (spec §6.3.6): choosing a type replaces the content of this occupied pane.
+        case replacing(PaneID)
         /// Nowhere to add: a window with panes but no active pane.
         case none
 
@@ -60,6 +62,8 @@ struct ContentPicker {
             try? await workspace.addContent(type, url: nil, into: pane)
         case let .besides(pane, edge):
             try? await workspace.addContent(type, besides: pane, edge: edge)
+        case let .replacing(pane):
+            _ = try? await workspace.replaceContent(pane, with: type, url: nil)
         }
     }
 }
@@ -68,7 +72,7 @@ extension SplitKitWorkspace {
     func contentPicker(for target: ContentPicker.Target) -> ContentPicker {
         let isPending = switch target {
         case .emptyWindow: mainWindow.map(isClosing(window:)) ?? false
-        case let .emptyPane(pane), let .besides(pane, _): isClosing(pane: pane)
+        case let .emptyPane(pane), let .besides(pane, _), let .replacing(pane): isClosing(pane: pane)
         case .none: false
         }
         return ContentPicker(

@@ -5,19 +5,29 @@ import SplitKitModel
 /// an unavailable placeholder. Runtime-only; the window that hosts the pane shows it as an alert.
 struct ClosePrompt: Equatable, Identifiable {
     enum Kind: Equatable {
-        /// "Close window with N panes?" with Close All / Cancel (spec §7.5).
-        case window(panes: Int)
+        /// "Close window with N panes?" with Close All / Cancel (spec §7.5); a detached window also offers
+        /// Dock Back Instead (spec §9).
+        case window(panes: Int, offersDockBack: Bool = false)
         /// Close of an unavailable placeholder, which has no `shouldClose()` (spec §6.3.2, §8).
         case placeholder(typeName: String)
+    }
+
+    /// What the user chose: the confirm button, Cancel, or *Dock Back Instead*.
+    enum Answer: Equatable {
+        case confirm, cancel, dockBack
     }
 
     let id: Int
     let window: WindowID
     let kind: Kind
 
+    var offersDockBack: Bool {
+        if case .window(_, true) = kind { true } else { false }
+    }
+
     var title: String {
         switch kind {
-        case let .window(panes): ChromeText.closeWindowTitle(panes: panes)
+        case let .window(panes, _): ChromeText.closeWindowTitle(panes: panes)
         case let .placeholder(typeName): ChromeText.closePlaceholderTitle(typeName)
         }
     }
@@ -43,7 +53,7 @@ extension SplitKitWorkspace {
     /// placeholder's confirmation. Empty panes never count.
     func closePromptKind(forWindow window: WindowID) -> ClosePrompt.Kind? {
         let contents = windowLayout(window)?.root?.leaves.compactMap(\.content) ?? []
-        if contents.count > 1 { return .window(panes: contents.count) }
+        if contents.count > 1 { return .window(panes: contents.count, offersDockBack: windowLayout(window)?.kind == .detached) }
         if let only = contents.first, store[only] == nil { return .placeholder(typeName: typeName(of: only) ?? "") }
         return nil
     }
@@ -58,11 +68,12 @@ extension View {
             prompt?.title ?? "",
             isPresented: Binding(
                 get: { prompt != nil },
-                set: { if !$0, let prompt { workspace.answer(prompt, confirmed: false) } }),
+                set: { if !$0, let prompt { workspace.answer(prompt, .cancel) } }),
             presenting: prompt
         ) { prompt in
-            Button(prompt.confirmTitle, role: .destructive) { workspace.answer(prompt, confirmed: true) }
-            Button(ChromeText.cancel, role: .cancel) { workspace.answer(prompt, confirmed: false) }
+            Button(prompt.confirmTitle, role: .destructive) { workspace.answer(prompt, .confirm) }
+            if prompt.offersDockBack { Button(ChromeText.dockBackInstead) { workspace.answer(prompt, .dockBack) } }
+            Button(ChromeText.cancel, role: .cancel) { workspace.answer(prompt, .cancel) }
         } message: { prompt in
             Text(prompt.message)
         }

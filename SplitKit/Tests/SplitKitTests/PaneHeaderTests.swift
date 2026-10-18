@@ -128,13 +128,15 @@ import SplitKitModel
         #expect(workspace.mainLeaves.isEmpty)
     }
 
-    @Test func detachAndMoveToWindowAreDisabledUntilPhase3() async throws {
+    @Test func moveToWindowHasNothingToChooseWithOnlyOneWindow() async throws {
         let pane = try await addFirst()
         let model = menu(pane)
         let before = try Migrator.encode(workspace.session)
-        #expect(!model.isEnabled(.detach) && !model.isEnabled(.moveToWindow))
-        await model.run(.detach, in: workspace)
-        await model.run(.moveToWindow, in: workspace)
+        #expect(model.isEnabled(.detach) && model.windowChoices.isEmpty && !model.canMoveToWindow)
+        let unknown = PaneMenuModel.Action.moveToWindow(WindowID(raw: UUID()))
+        #expect(!model.isEnabled(unknown) && !model.isEnabled(.dockBack))
+        await model.run(unknown, in: workspace)
+        await model.run(.dockBack, in: workspace)
         #expect(try Migrator.encode(workspace.session) == before)
     }
 
@@ -143,7 +145,8 @@ import SplitKitModel
         _ = try workspace.commit(.beginClose(pane))
         let model = menu(pane)
         #expect(model.isPending)
-        let actions: [PaneMenuModel.Action] = [.addContent(TestContent.type), .split(.right), .split(.bottom), .detach, .moveToWindow, .closePane]
+        let actions: [PaneMenuModel.Action] = [.addContent(TestContent.type), .replaceContent, .split(.right), .split(.bottom), .detach,
+                                               .moveToWindow(workspace.mainLayout.id), .dockBack, .closePane]
         #expect(actions.allSatisfy { !model.isEnabled($0) })
         let session = try Migrator.encode(workspace.session)
         let runtime = workspace.runtime

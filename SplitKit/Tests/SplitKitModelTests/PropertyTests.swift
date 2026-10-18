@@ -5,10 +5,11 @@ import Testing
 private enum TxKind: String, CaseIterable {
     case insert, insertIntoEmptyWindow, move, moveIntoEmptyWindow, reorder, resize
     case beginClose, commitClose, cancelClose, beginCloseWindow, commitCloseWindow, cancelCloseWindow
-    case openMainWindow, setFocusMode, setActive, detach
+    case openMainWindow, setFocusMode, setActive, detach, commitReplace
 
     init(_ t: LayoutTransaction) {
         self = switch t {
+        case .commitReplace: .commitReplace
         case .insert: .insert
         case .insertIntoEmptyWindow: .insertIntoEmptyWindow
         case .move: .move
@@ -59,6 +60,8 @@ private enum TxKind: String, CaseIterable {
         case (.setActive, .unknownWindow), (.setActive, .unknownPane), (.setActive, .windowClosePending), (.setActive, .paneClosePending): true
         case (.detach, .unknownPane), (.detach, .windowClosePending), (.detach, .paneClosePending), (.detach, .unknownContent),
              (.detach, .windowIDInUse): true
+        case (.commitReplace, .unknownPane), (.commitReplace, .windowClosePending), (.commitReplace, .noCloseInProgress),
+             (.commitReplace, .unknownContent), (.commitReplace, .contentAlreadyHosted): true
         default: false
         }
     }
@@ -188,6 +191,9 @@ private struct Fuzzer {
         case 91..<94:
             let (p, w) = target(s)
             return .setActive(rng.chance(15) ? nil : p, in: w)
+        case 94..<97:
+            let content = newContent(s) ?? NewContent(id: ContentID(raw: fresh(0x0C)), type: testType, stateVersion: 1)
+            return .commitReplace(pendingPane(s, rt), with: content)
         default:
             return .detach(target(s).0, to: newWindow(s), placement: placement)
         }
@@ -278,7 +284,7 @@ private func checkSuccess(_ t: LayoutTransaction, _ kind: TxKind, before: Sessio
     // Identity: records survive unchanged; only inserts add and only closes release.
     var inserted: [ContentID] = []
     switch t {
-    case let .insert(c?, _, _, _), let .insertIntoEmptyWindow(c?, _): inserted = [c.id]
+    case let .insert(c?, _, _, _), let .insertIntoEmptyWindow(c?, _), let .commitReplace(_, c): inserted = [c.id]
     default: break
     }
     let beforeIDs = before.contents.map(\.id), afterIDs = after.contents.map(\.id)

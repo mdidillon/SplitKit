@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import SplitKitContent
 import SplitKitModel
+import SplitKitWindows
 
 /// The live workspace (§5): the `Session`, its `WorkspaceRuntime`, the registry and the live content
 /// objects. Every layout change goes through `SessionEngine.apply` (pure); the result is committed and
@@ -16,13 +17,17 @@ public final class SplitKitWorkspace {
     /// The live `PaneContent` objects (§6.4).
     let store = ContentStore()
     /// Source of new PaneIDs, SplitIDs, ContentIDs and WindowIDs. Advancing it is not app state (§6.2).
-    @ObservationIgnored private var ids: any IDGenerator
+    @ObservationIgnored var ids: any IDGenerator
     /// The confirmation the close UI shows now (the first of the queue); runtime-only, never persisted.
     private(set) var closePrompt: ClosePrompt?
-    @ObservationIgnored private var closePrompts: [(prompt: ClosePrompt, answer: CheckedContinuation<Bool, Never>)] = []
+    @ObservationIgnored private var closePrompts: [(prompt: ClosePrompt, answer: CheckedContinuation<ClosePrompt.Answer, Never>)] = []
     @ObservationIgnored private var closePromptCount = 0
-    /// The window whose Add Content… type list (⇧⌘N) is open; runtime-only, never persisted.
+    /// The window whose content picker (Add Content…, ⇧⌘N, or Replace Content…) is open; runtime-only, never persisted.
     private(set) var addContentRequest: WindowID?
+    /// The pane the open picker replaces the content of; nil when it adds (§6.3.6). Set only with `addContentRequest`.
+    private(set) var replaceContentRequest: PaneID?
+    /// The displays a detached window is placed on (§9); tests inject their own.
+    @ObservationIgnored var displays: @MainActor () -> [DisplaySnapshot] = DetachPlacement.currentDisplays
 
     /// The newest failed save, or nil after a successful one; a failed save is retried at the next snapshot
     /// point (§8).
@@ -40,8 +45,8 @@ public final class SplitKitWorkspace {
     @ObservationIgnored private var autosaveTask: Task<Void, Never>?
     @ObservationIgnored private let clock: any Clock<Duration>
     @ObservationIgnored private let encode: SessionWriter.Encode
-    /// The window layer: `CoordinatedWindows` in `.splitKit` mode, nil in `.host` mode (the host owns its
-    /// windows, §9). Tests that don't set one show no windows.
+    /// The window layer: `CoordinatedWindows` (in `.host` mode it opens detached windows only, the host owns
+    /// its main windows, §9). Tests that use the internal initialiser show no windows unless they set one.
     @ObservationIgnored var windowHost: (any WorkspaceWindowHost)?
     /// The coordinator window that is key; runtime-only. The menu bar acts in it when no `SplitKitView`
     /// publishes its window as the focused scene value.
@@ -52,7 +57,7 @@ public final class SplitKitWorkspace {
             throw .unreadable(underlying: "persistence file \(url) is not a file URL")
         }
         self.init(registry: registry, configuration: configuration, ids: SystemIDGenerator())
-        if case .splitKit = configuration.windowManagement { windowHost = CoordinatedWindows(workspace: self) }
+        windowHost = CoordinatedWindows(workspace: self)
     }
 
     /// Tests inject a `SeededIDGenerator`, a clock for the autosave debounce and a failing encoder.
@@ -95,6 +100,12 @@ public final class SplitKitWorkspace {
             } else {
                 try commit(.openMainWindow(WindowID(raw: ids.next()), placement: .defaultMainWindow))
             }
+        case let .detach(pane):
+            try detach(pane)
+        case let .moveToWindow(pane, window):
+            try moveToWindow(pane, window)
+        case let .dockBack(window):
+            try dockBack(window)
         }
     }
 
@@ -131,6 +142,49 @@ public final class SplitKitWorkspace {
         commit(result)
     }
 
+    /// Replaces the content of `pane` with a new `type` content (*Pane ▸ Replace Content…*, §6.3.6). The new
+    /// object is created first (`make(…, url:)` validates the file; a failure throws and changes nothing). Then
+    /// the two-stage close runs as for *Close Pane*: `beginClose`, the old content's `shouldClose()` (or SplitKit's
+    /// own confirmation for a placeholder). Declined → `cancelClose`, the new object is dropped without
+    /// `willRelease()` and false is returned. Accepted → `commitReplace`: `pane` keeps its ID, position and
+    /// fraction, the old content is released, one snapshot, true.
+    ///
+    /// As for `addContent`, a `LayoutError` (unknown pane, empty pane, pending close) is thrown as
+    /// `.creationFailed(type, .other("layout: …"))` with nothing changed (approved deviation 3).
+    @discardableResult
+    public func replaceContent(_ pane: PaneID, with type: ContentType, url: URL?) async throws(RegistryError) -> Bool {
+        guard let metadata = registry.metadata(for: type) else { throw .unknownType(type) }
+        let old: ContentID?
+        do {
+            let window = try window(containing: pane)
+            old = windowLayout(window)?.root?.leaves.first { $0.pane == pane }?.content
+            guard old != nil else { throw LayoutError.unknownContent(.emptyPane) }
+        } catch {
+            throw .creationFailed(type, .other("layout: \(error)"))
+        }
+        let content = NewContent(id: ContentID(raw: ids.next()), type: type, stateVersion: metadata.stateVersion)
+        let object = try registry.make(type, id: content.id, url: url, state: nil, stateVersion: nil)
+        let accepted: Bool
+        do {
+            accepted = try await askToClose(pane)
+        } catch {
+            throw .creationFailed(type, .other("layout: \(error)"))
+        }
+        guard accepted else {
+            _ = try? commit(.cancelClose(pane))
+            return false
+        }
+        do {
+            let result = try apply(.commitReplace(pane, with: content))
+            store.insert(object, for: content.id)
+            commit(result)
+        } catch {
+            _ = try? commit(.cancelClose(pane))
+            throw .creationFailed(type, .other("layout: \(error)"))
+        }
+        return true
+    }
+
     /// Adds a new `type` content in a new pane next to `pane`: `split` (an empty pane at `edge`), then
     /// `addContent` into it. Composition of the two existing commands; if the add fails the empty pane stays.
     func addContent(_ type: ContentType, besides pane: PaneID, edge: DropEdge) async throws(RegistryError) {
@@ -148,9 +202,11 @@ public final class SplitKitWorkspace {
 
     // MARK: Add Content… and focus mode (§7.3, §7.5)
 
-    /// Where Add Content goes in `window`: its active pane, or the empty window.
+    /// Where the picker of `window` acts: the pane being replaced while Replace Content… is open, else where
+    /// Add Content goes: the active pane, or the empty window.
     func addContentTarget(in window: WindowID) -> ContentPicker.Target {
         guard let layout = windowLayout(window) else { return .none }
+        if addContentRequest == window, let pane = replaceContentRequest { return .replacing(pane) }
         guard let root = layout.root else { return layout.kind == .main ? .emptyWindow : .none }
         guard let leaf = root.leaves.first(where: { $0.pane == layout.activePane }) else { return .none }
         return .adding(to: leaf.pane, hosting: leaf.content)
@@ -159,18 +215,29 @@ public final class SplitKitWorkspace {
     /// Opens the type list of `window` (File ▸ Add Content…).
     func requestAddContent(in window: WindowID) {
         addContentRequest = window
+        replaceContentRequest = nil
     }
 
-    /// Closes the type list of `window` without adding anything.
+    /// Opens the same type list in replace mode for `pane` (Pane ▸ Replace Content…, §6.3.6).
+    func requestReplaceContent(of pane: PaneID) {
+        guard let window = try? window(containing: pane) else { return }
+        addContentRequest = window
+        replaceContentRequest = pane
+    }
+
+    /// Closes the type list of `window` without adding or replacing anything.
     func cancelAddContent(in window: WindowID) {
-        if addContentRequest == window { addContentRequest = nil }
+        guard addContentRequest == window else { return }
+        addContentRequest = nil
+        replaceContentRequest = nil
     }
 
     /// Chooses `type` in the open type list of `window`: closes the list, then adds at the target the
     /// window has now. The one path for the popover's rows, its Return key and the tests.
     func chooseRequestedContent(_ type: ContentType, in window: WindowID) async {
+        let picker = contentPicker(for: addContentTarget(in: window))
         cancelAddContent(in: window)
-        await contentPicker(for: addContentTarget(in: window)).choose(type, in: self)
+        await picker.choose(type, in: self)
     }
 
     /// What Esc does in `window`: leave focus mode. Nil when the window isn't in focus mode, so SplitKit
@@ -250,7 +317,7 @@ public final class SplitKitWorkspace {
     /// Commits a successful result, then runs its side effects in the §6.2 order: new windows open, the views
     /// re-host from the new session, released contents get `willRelease()` and are dropped (§6.3.2), closed
     /// windows close, then the snapshot: debounced, or at once when a window closed (§8).
-    private func commit(_ result: TransactionResult, isSnapshotPoint: Bool = true) {
+    func commit(_ result: TransactionResult, isSnapshotPoint: Bool = true) {
         session = result.session
         runtime = result.runtime
         windowHost?.open(result.windowsCreated)
@@ -284,27 +351,39 @@ public final class SplitKitWorkspace {
     /// `cancelClose`. Empty panes commit without asking. An unavailable placeholder has no object: SplitKit's
     /// own confirmation replaces `shouldClose()`, and nothing is released (§6.3.2).
     private func closePane(_ pane: PaneID) async throws(LayoutError) {
+        let accepted = try await askToClose(pane)
+        try commit(accepted ? .commitClose(pane) : .cancelClose(pane))
+    }
+
+    /// Stage 1 of §6.3 for `pane`: `beginClose`, then the content's `shouldClose()` (SplitKit's own confirmation
+    /// for a placeholder; empty panes accept). The pane stays pending: the caller commits or cancels. The one
+    /// path of Close Pane and Replace Content….
+    private func askToClose(_ pane: PaneID) async throws(LayoutError) -> Bool {
         let window = try window(containing: pane)
         let content = windowLayout(window)?.root?.leaves.first { $0.pane == pane }?.content
         try commit(.beginClose(pane))
-        var accepted = true
-        if let content {
-            if let object = store[content] {
-                accepted = await object.shouldClose()
-            } else {
-                accepted = await confirm(.placeholder(typeName: typeName(of: content) ?? ""), in: window)
-            }
-        }
-        try commit(accepted ? .commitClose(pane) : .cancelClose(pane))
+        guard let content else { return true }
+        if let object = store[content] { return await object.shouldClose() }
+        return await confirm(.placeholder(typeName: typeName(of: content) ?? ""), in: window) == .confirm
     }
 
     /// `beginCloseWindow`, then the one window prompt when it applies (`closePromptKind(forWindow:)`), then
     /// every hosted content in tree order; the first decline, or Cancel, cancels and nothing is closed.
+    /// *Dock Back Instead* cancels the close and docks the window back (§9).
     private func closeWindow(_ window: WindowID) async throws(LayoutError) {
         try commit(.beginCloseWindow(window))
-        if let kind = closePromptKind(forWindow: window), !(await confirm(kind, in: window)) {
-            try commit(.cancelCloseWindow(window))
-            return
+        if let kind = closePromptKind(forWindow: window) {
+            switch await confirm(kind, in: window) {
+            case .confirm:
+                break
+            case .cancel:
+                try commit(.cancelCloseWindow(window))
+                return
+            case .dockBack:
+                try commit(.cancelCloseWindow(window))
+                try dockBack(window)
+                return
+            }
         }
         for leaf in windowLayout(window)?.root?.leaves ?? [] {
             guard let content = leaf.content, let object = store[content] else { continue }
@@ -320,7 +399,7 @@ public final class SplitKitWorkspace {
     // MARK: Close confirmations (§7.5, §8)
 
     /// Shows a prompt of `kind` on `window` and returns the user's answer. Prompts are queued, one at a time.
-    private func confirm(_ kind: ClosePrompt.Kind, in window: WindowID) async -> Bool {
+    private func confirm(_ kind: ClosePrompt.Kind, in window: WindowID) async -> ClosePrompt.Answer {
         closePromptCount += 1
         let prompt = ClosePrompt(id: closePromptCount, window: window, kind: kind)
         return await withCheckedContinuation { continuation in
@@ -330,11 +409,16 @@ public final class SplitKitWorkspace {
     }
 
     /// Answers `prompt` (the one being shown; anything else is ignored) and shows the next one, if any.
-    func answer(_ prompt: ClosePrompt, confirmed: Bool) {
+    func answer(_ prompt: ClosePrompt, _ answer: ClosePrompt.Answer) {
         guard let first = closePrompts.first, first.prompt == prompt else { return }
         closePrompts.removeFirst()
         closePrompt = closePrompts.first?.prompt
-        first.answer.resume(returning: confirmed)
+        first.answer.resume(returning: answer)
+    }
+
+    /// `answer(_:_:)` with the confirm button (`confirmed`) or Cancel.
+    func answer(_ prompt: ClosePrompt, confirmed: Bool) {
+        answer(prompt, confirmed ? .confirm : .cancel)
     }
 }
 
@@ -453,6 +537,7 @@ extension SplitKitWorkspace {
         session = Session()
         runtime = WorkspaceRuntime()
         addContentRequest = nil
+        replaceContentRequest = nil
         unavailableReasons = [:]
         stateEncodingErrors = [:]
         capturedStates = [:]

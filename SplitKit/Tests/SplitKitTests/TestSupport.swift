@@ -307,12 +307,31 @@ func waitUntil(_ comment: String, timeout: Duration = .seconds(5), _ condition: 
 @MainActor
 func makePersistentWorkspace(_ persistence: SplitKitConfiguration.Persistence, seed: UInt64 = 0x5EED,
                              debounce: Duration = .milliseconds(10), types: [any PaneContent.Type] = [CounterContent.self],
+                             detach: SplitKitConfiguration.Detach = .enabled,
                              encode: @escaping SessionWriter.Encode = { try Migrator.encode($0) }) throws -> SplitKitWorkspace {
     let registry = ContentRegistry()
     try registry.register(TestContent.self)
     for type in types { try registry.register(type) }
-    return SplitKitWorkspace(registry: registry, configuration: SplitKitConfiguration(persistence: persistence, autosaveDebounce: debounce),
-                             ids: SeededIDGenerator(seed: seed), encode: encode)
+    let workspace = SplitKitWorkspace(registry: registry,
+                                      configuration: SplitKitConfiguration(persistence: persistence, detach: detach, autosaveDebounce: debounce),
+                                      ids: SeededIDGenerator(seed: seed), encode: encode)
+    workspace.displays = { [testDisplay] }
+    return workspace
+}
+
+/// The one display detached windows are placed on in tests: 1600×1000 pt with a 32 pt menu bar.
+let testDisplay = DisplaySnapshot(id: "test", frame: CGRect(x: 0, y: 0, width: 1600, height: 1000),
+                                  visibleFrame: CGRect(x: 0, y: 0, width: 1600, height: 968), scale: 2, isMain: true)
+
+/// A `makePersistentWorkspace` with a recording window layer: no window is shown.
+@MainActor
+func hostedWorkspace(_ persistence: SplitKitConfiguration.Persistence = .disabled, debounce: Duration = .milliseconds(10),
+                     types: [any PaneContent.Type] = [CounterContent.self],
+                     detach: SplitKitConfiguration.Detach = .enabled) throws -> (SplitKitWorkspace, RecordingWindowHost) {
+    let workspace = try makePersistentWorkspace(persistence, debounce: debounce, types: types, detach: detach)
+    let host = RecordingWindowHost()
+    workspace.windowHost = host
+    return (workspace, host)
 }
 
 /// A one-window session with one pane hosting a record of `type`, and its encoded bytes.

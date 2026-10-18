@@ -8,26 +8,18 @@ import SplitKitModel
 /// The workspace ↔ window layer connection (§5, §6.2 side-effect order, §6.3.5, §8 snapshot on window
 /// close, §9 placement write-back and `contentMinSize`), with a recording window host: no window is shown.
 
-@MainActor
-private func hostedWorkspace(_ persistence: SplitKitConfiguration.Persistence = .disabled,
-                             debounce: Duration = .milliseconds(10)) throws -> (SplitKitWorkspace, RecordingWindowHost) {
-    let workspace = try makePersistentWorkspace(persistence, debounce: debounce)
-    let host = RecordingWindowHost()
-    workspace.windowHost = host
-    return (workspace, host)
-}
-
 private let userPlacement = SavedPlacement(intendedFrame: CGRect(x: 40, y: 60, width: 900, height: 700),
                                            displayID: "display-1", relativeOrigin: CGPoint(x: 40, y: 35))
 
 @MainActor
 @Suite struct WindowHostTests {
-    @Test func onlySplitKitModeGetsTheCoordinatorAndNoWindowOpensBeforeARestore() throws {
+    @Test func bothModesGetTheCoordinatorAndNoWindowOpensBeforeARestore() throws {
         let managed = try SplitKitWorkspace(registry: .init(), configuration: SplitKitConfiguration(persistence: .disabled))
         #expect(managed.windowHost is CoordinatedWindows)
+        // `.host` mode: the same layer, which opens detached windows only (the host owns its main window, §9).
         let hosted = try SplitKitWorkspace(registry: .init(), configuration: SplitKitConfiguration(
             windowManagement: .host(makeDetachedWindow: nil), persistence: .disabled))
-        #expect(hosted.windowHost == nil)
+        #expect(hosted.windowHost is CoordinatedWindows)
     }
 
     @Test func theWindowContentHookWrapsEveryWindowAndNilLeavesItAlone() throws {

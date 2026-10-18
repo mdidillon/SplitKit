@@ -14,11 +14,15 @@ import SplitKitWindows
     func flushPendingPlacements()
 }
 
-/// `.splitKit` mode (§5, §9): connects a workspace to a `WindowCoordinator`. Each window shows
-/// `SplitKitView` for its `WindowID`, so the coordinator never sees SplitKit UI types (§3). User actions on
-/// a window come back as workspace calls: a move or resize as its new placement, the close button as the
-/// two-stage `closeWindow` (§6.3.4), key changes as `keyWindow`. The coordinator is created with the first
-/// window, so a workspace that never shows one creates no AppKit objects.
+/// Connects a workspace to a `WindowCoordinator` (§5, §9). Each window shows `SplitKitView` for its
+/// `WindowID`, so the coordinator never sees SplitKit UI types (§3). User actions on a window come back as
+/// workspace calls: a move or resize as its new placement, the close button as the two-stage `closeWindow`
+/// (§6.3.4), key changes as `keyWindow`. The coordinator is created with the first window, so a workspace
+/// that never shows one creates no AppKit objects.
+///
+/// `.splitKit` mode: it opens and closes every window. `.host` mode: the host owns the main window, so only
+/// detached windows are opened here, created by the host's `makeDetachedWindow` when given (SplitKit then
+/// sets no frame on it), else by SplitKit.
 @MainActor final class CoordinatedWindows: WorkspaceWindowHost {
     private weak var workspace: SplitKitWorkspace?
     private var coordinator: WindowCoordinator?
@@ -32,8 +36,14 @@ import SplitKitWindows
         let tokens = EnvironmentValues().splitKitTokens
         for id in windows {
             guard let layout = workspace.windowLayout(id) else { continue }
+            var hostWindow: NSWindow?
+            if case let .host(makeDetachedWindow) = workspace.configuration.windowManagement {
+                guard layout.kind == .detached else { continue }
+                hostWindow = makeDetachedWindow?(id)
+            }
             makeCoordinator(workspace).open(id, placement: layout.placement,
-                                            contentMinSize: workspace.minimumContentSize(of: id, tokens: tokens))
+                                            contentMinSize: workspace.minimumContentSize(of: id, tokens: tokens),
+                                            hostWindow: hostWindow)
         }
     }
 

@@ -11,6 +11,7 @@ public enum LayoutTransaction: Sendable {
     case beginClose(PaneID)                                             // stage 1, see §6.3
     case commitClose(PaneID)                                            // stage 2
     case cancelClose(PaneID)
+    case commitReplace(PaneID, with: NewContent)                        // stage 2 alternative: replace content in place (§6.3.6)
     case beginCloseWindow(WindowID)                                     // §6.3.4
     case commitCloseWindow(WindowID)
     case cancelCloseWindow(WindowID)
@@ -27,6 +28,18 @@ public struct TransactionResult: Sendable {
     public var windowsClosed: [WindowID]
     public var released: [ContentID]          // contents whose host must dispose them
     public var normalizations: [Normalization] // only the transaction cases below
+
+    /// Public so a caller that applies several transactions on one working copy (Dock Back, §9) can merge
+    /// their results into the one it commits.
+    public init(session: Session, runtime: WorkspaceRuntime, windowsCreated: [WindowID], windowsClosed: [WindowID],
+                released: [ContentID], normalizations: [Normalization]) {
+        self.session = session
+        self.runtime = runtime
+        self.windowsCreated = windowsCreated
+        self.windowsClosed = windowsClosed
+        self.released = released
+        self.normalizations = normalizations
+    }
 }
 
 /// Every normalisation SplitKit reports. Transactions produce only the first three; Migrator.decode only the last three.

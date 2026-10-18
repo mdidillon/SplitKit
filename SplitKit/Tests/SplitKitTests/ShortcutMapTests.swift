@@ -20,8 +20,8 @@ import Testing
         for (command, key) in focus { #expect(map[command] == shortcut(key, [.command, .option])) }
         let move: [(ShortcutCommand, KeyEquivalent)] = [(.moveLeft, .leftArrow), (.moveRight, .rightArrow), (.moveUp, .upArrow), (.moveDown, .downArrow)]
         for (command, key) in move { #expect(map[command] == shortcut(key, [.control, .option, .command])) }
-        #expect(map[.focusPane] == shortcut("f", [.control, .command]))
-        #expect(map[.detach] == shortcut("d", [.option, .command]))
+        #expect(map[.focusPane] == shortcut(.return, [.shift, .command]))
+        #expect(map[.detach] == shortcut("d", [.shift, .option, .command]))
         #expect(map[.closePane] == shortcut("w", .command))
         #expect(map[.closeWindow] == shortcut("w", [.command, .shift]))
         #expect(ShortcutCommand.allCases.allSatisfy { map[$0] != nil }, "every command has a default")
@@ -38,7 +38,8 @@ import Testing
     /// The listed standard shortcuts (`ShortcutMap.standardMacOS`): Quit, Hide, Hide Others, Minimize, Settings,
     /// New, Open, Save, Save As, Print, Page Setup, Undo, Redo, Cut, Copy, Paste, Paste and Match Style,
     /// Select All, Find, Find Next/Previous, Use Selection for Find, Jump to Selection, Show Fonts, Bold,
-    /// Italic, Underline, Close All, Cycle Through Windows (both ways), Help.
+    /// Italic, Underline, Close All, Cycle Through Windows (both ways), Help, Enter Full Screen, Turn Dock
+    /// Hiding On/Off.
     @Test func defaultMapCollidesWithNoStandardShortcut() {
         #expect(ShortcutMap.default.conflicts() == [])
         #expect(ShortcutMap.default.conflicts(reserved: ShortcutMap.standardMacOS) == [])
@@ -52,14 +53,19 @@ import Testing
                 "the list itself has no duplicates")
     }
 
-    /// Deviation candidate: the spec's own table overlaps two system shortcuts. The test pins them so they
-    /// stay visible.
-    @Test func theSpecTableOverlapsExactlyTwoSystemShortcuts() {
-        let overlaps = ShortcutMap.default.conflicts(reserved: ShortcutMap.systemOverlaps)
-        #expect(overlaps == [
-            .reserved(.focusPane, shortcut("f", [.control, .command]), name: "Enter Full Screen"),
-            .reserved(.detach, shortcut("d", [.option, .command]), name: "Turn Dock Hiding On/Off"),
-        ])
+    /// §7.5: Focus Pane and Detach Pane were remapped off the two system shortcuts they collided with.
+    @Test func theSystemShortcutsAreReservedAndTheDefaultMapAvoidsThem() {
+        let system: [(String, KeyboardShortcut)] = [("Enter Full Screen", shortcut("f", [.control, .command])),
+                                                    ("Turn Dock Hiding On/Off", shortcut("d", [.option, .command]))]
+        for (name, value) in system {
+            #expect(ShortcutMap.standardMacOS.contains { $0.name == name && $0.shortcut == value })
+            #expect(ShortcutCommand.allCases.allSatisfy { ShortcutMap.default[$0] != value }, "\(name) is not used by the default map")
+        }
+        var old = ShortcutMap.default
+        old[.focusPane] = system[0].1
+        old[.detach] = system[1].1
+        #expect(old.conflicts() == [.reserved(.focusPane, system[0].1, name: system[0].0),
+                                    .reserved(.detach, system[1].1, name: system[1].0)])
     }
 
     // MARK: Host maps

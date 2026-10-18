@@ -509,7 +509,7 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
 - **`focusModePane`** is the pane filling its window (focus mode). Entering it also sets `activePane` to that pane.
 - **Resize:** no effect on either field. **Display change / re-placement:** unchanged. **Native full screen:** independent and combinable; exiting full screen keeps focus mode. **Structural transactions** in that window (insert, move, detach, close) clear `focusModePane` first. A close of the focused pane clears both fields, and `activePane` moves to the nearest sibling (§6.1.9).
 - **Persistence:** both fields are persisted. Any dangling reference is set to nil on load (reported as `.clearedActivePane` / `.clearedFocusModePane`).
-- **Commands:** header toggle, *Pane ▸ Focus Pane* (⌃⌘F) and Esc to exit (only when the content doesn't consume Esc).
+- **Commands:** header toggle, *Pane ▸ Focus Pane* (⇧⌘↩) and Esc to exit (only when the content doesn't consume Esc).
 
 ### 7.4 Content toolbar contract
 
@@ -681,6 +681,14 @@ Decided 18 Oct 2026. Q1 and Q2 by Marc; the rest by Grok Bot on Marc's instructi
 5. **Drop overlay:** implemented in P3 and styled through the new `DropOverlayStyle` protocol with `.glass`/`.plain` built-ins (§5, `Docs/Design.md` §7).
 6. **Shortcut clashes:** Focus Pane ⇧⌘↩ and Detach Pane ⇧⌥⌘D (§7.5).
 7. **`Docs/Design.md` [check] values:** kept unchanged as the v1 defaults; they stay marked until Marc's visual check.
+
+**P3a interpretations (decided by Grok Bot):**
+1. Dock Back keeps tree order: the first content goes next to the main window's active (or last) pane, each further one next to the pane the previous one got.
+2. Detach placement offsets the source window's `intendedFrame` (works for host-owned main windows too); the new window's minimum is its pane's minimum plus the title bar.
+3. `replaceContent` reports layout failures as `RegistryError.creationFailed(type, .other("layout: …"))`, like P2 deviation 3.
+4. `ContentID.emptyPane` is `package` (was internal).
+5. In `.host` mode SplitKit's window layer opens detached windows only; for a `makeDetachedWindow` window it sets the content view and delegate (replacing the host's delegate) and never its frame.
+6. Dock Back stays available with `Detach.disabled`; *Dock Back Instead* appears on the window prompt, which exists only for N ≥ 2 (§7.5); a single-content detached window closes through that content's `shouldClose()`.
 
 **Approved P2 deviations:**
 1. `SplitKitCommand` declared (§5 only names it).

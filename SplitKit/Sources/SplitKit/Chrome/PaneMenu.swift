@@ -17,10 +17,13 @@ struct PaneMenuModel {
         /// Moves the pane's content to the near edge of its neighbour in this direction (⌃⌥⌘-arrows).
         case moveToEdge(FocusDirection)
         case toggleFocusMode
-        /// Phase 3: always disabled until then.
+        /// Opens the type list in replace mode for the pane (spec §6.3.6).
+        case replaceContent
         case detach
-        /// Phase 3: always disabled until then.
-        case moveToWindow
+        /// Moves the pane's content into this other window (spec §9).
+        case moveToWindow(WindowID)
+        /// Moves every content of the detached window into the main window (spec §9).
+        case dockBack
         /// The pane, or the empty main window when there is no pane (⌘W, spec §7.5).
         case closePane
         case closeWindow
@@ -48,7 +51,7 @@ struct PaneMenuModel {
             case .detach: .detach
             case .closePane: .closePane
             case .closeWindow: .closeWindow
-            case .addContent, .moveToWindow: nil
+            case .addContent, .replaceContent, .moveToWindow, .dockBack: nil
             }
         }
     }
@@ -77,15 +80,31 @@ struct PaneMenuModel {
     let content: ContentID?
     /// The geometric neighbour per direction that can be moved to (not closing).
     let neighbours: [FocusDirection: PaneID]
+    /// The other windows Move to Window ▸ lists, main first (spec §9).
+    let windowChoices: [SplitKitWorkspace.WindowChoice]
+    /// `.disabled` hides Detach and Move to Window (spec §9).
+    let detach: SplitKitConfiguration.Detach
     /// Add: in the pane when it is empty, otherwise in a new pane to its right.
     let picker: ContentPicker
     let contentMenu: ContentMenu?
 
     var canAdd: Bool { picker.isEnabled }
 
+    /// Detach and Move to Window are offered at all (spec §9: `Detach.disabled` hides them).
+    var offersDetach: Bool { detach != .disabled }
+
+    /// The pane's content can leave its window.
+    private var canLeaveWindow: Bool { pane != nil && !isPending && content != nil && offersDetach }
+
+    /// The Move to Window ▸ submenu has something to choose.
+    var canMoveToWindow: Bool { canLeaveWindow && !windowChoices.isEmpty }
+
     func isEnabled(_ action: Action) -> Bool {
         switch action {
-        case .detach, .moveToWindow: false
+        case .detach: canLeaveWindow
+        case let .moveToWindow(window): canLeaveWindow && windowChoices.contains { $0.id == window }
+        case .replaceContent: pane != nil && !isPending && content != nil && !picker.entries.isEmpty
+        case .dockBack: windowKind == .detached && !isPending
         case .addContent, .chooseContent: canAdd
         case .split: pane != nil && !isPending
         case .toggleFocusMode: pane != nil && !isPending && focusModeEnabled
@@ -105,8 +124,10 @@ struct PaneMenuModel {
         case let .split(edge): edge == .bottom ? ChromeText.splitDown : edge == .right ? ChromeText.splitRight : ChromeText.split
         case let .focusNeighbour(direction), let .moveToEdge(direction): ChromeText.direction(direction)
         case .toggleFocusMode: SplitKitStyleConstants.Accessibility.focusToggleLabel
+        case .replaceContent: ChromeText.replaceContent
         case .detach: ChromeText.detach
-        case .moveToWindow: ChromeText.moveToWindow
+        case let .moveToWindow(window): windowChoices.first { $0.id == window }?.title ?? ChromeText.moveToWindow
+        case .dockBack: ChromeText.dockBack
         case .closePane:
             if pane == nil, windowKind == .main { ChromeText.closeWindow }
             else if windowKind == .detached, paneCount == 1 { ChromeText.closePaneAndWindow }
@@ -146,8 +167,14 @@ struct PaneMenuModel {
             }
         case .closeWindow:
             if let window { try? await workspace.perform(.closeWindow(window)) }
-        case .detach, .moveToWindow:
-            break
+        case .replaceContent:
+            if let pane { workspace.requestReplaceContent(of: pane) }
+        case .detach:
+            if let pane { try? await workspace.perform(.detach(pane)) }
+        case let .moveToWindow(target):
+            if let pane { try? await workspace.perform(.moveToWindow(pane, target)) }
+        case .dockBack:
+            if let window { try? await workspace.perform(.dockBack(window)) }
         }
     }
 }
@@ -189,7 +216,8 @@ extension SplitKitWorkspace {
             pane: pane, isEmpty: content == nil,
             isPending: pane.map(isClosing(pane:)) ?? window.map(isClosing(window:)) ?? false,
             isWindowInFocusMode: layout?.focusModePane != nil, focusModeEnabled: configuration.focusModeEnabled,
-            content: content, neighbours: neighbours, picker: contentPicker(for: target),
+            content: content, neighbours: neighbours, windowChoices: moveTargets(excluding: window),
+            detach: configuration.detach, picker: contentPicker(for: target),
             contentMenu: content.flatMap { content in
                 items.isEmpty ? nil : PaneMenuModel.ContentMenu(title: typeName(of: content) ?? "", items: items)
             })
@@ -239,15 +267,26 @@ struct PaneMenu: View {
             Menu(ChromeText.add) { ContentPickerButtons(workspace: workspace, picker: model.picker) }
                 .disabled(!model.canAdd)
         }
+        if !model.isEmpty { entry(.replaceContent) }
         Divider()
         entry(.split(.right))
         entry(.split(.bottom))
         Divider()
-        entry(.detach)
-        Menu(ChromeText.moveToWindow) {}
-            .disabled(!model.isEnabled(.moveToWindow))
+        windowEntries()
+        if model.windowKind == .detached { entry(.dockBack) }
         Divider()
         entry(.closePane)
+    }
+
+    /// Detach and the Move to Window ▸ submenu; neither exists with `Detach.disabled` (spec §9).
+    @ViewBuilder private func windowEntries(_ shortcuts: ShortcutMap? = nil) -> some View {
+        if model.offersDetach {
+            entry(.detach, shortcuts)
+            Menu(ChromeText.moveToWindow) {
+                ForEach(model.windowChoices, id: \.id) { entry(.moveToWindow($0.id), shortcuts) }
+            }
+            .disabled(!model.canMoveToWindow)
+        }
     }
 
     @ViewBuilder private func menuBar(_ shortcuts: ShortcutMap) -> some View {
@@ -263,7 +302,8 @@ struct PaneMenu: View {
             ForEach(FocusDirection.allCases, id: \.self) { entry(.moveToEdge($0), shortcuts) }
         }
         Divider()
-        entry(.detach, shortcuts)
+        entry(.replaceContent, shortcuts)
+        windowEntries(shortcuts)
         if let contentMenu = model.contentMenu {
             Divider()
             Menu(contentMenu.title) { PaneToolbarMenuEntries(items: contentMenu.items, shortcuts: shortcuts) }

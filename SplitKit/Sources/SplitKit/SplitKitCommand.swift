@@ -23,4 +23,14 @@ public enum SplitKitCommand: Sendable {
     /// File ▸ New Window (§6.3.5): brings the main window forward, or opens one (`openMainWindow`) when
     /// there is none.
     case newWindow
+    /// Pane ▸ Detach: the pane's content moves into a new detached window, placed 24 pt off its source window
+    /// (§9). Does nothing when `SplitKitConfiguration.detach` is `.disabled`.
+    case detach(PaneID)
+    /// Pane ▸ Move to Window ▸: a cross-window `move` as a `.right` edge insert next to the target window's
+    /// active pane (its last pane if none is active), or into an empty main window (§9). Does nothing when
+    /// `detach` is `.disabled`.
+    case moveToWindow(PaneID, WindowID)
+    /// Window ▸ Dock Back: every content of the detached window moves into the main window, in tree order, as
+    /// one all-or-nothing commit; the main window is opened first if there is none (§9).
+    case dockBack(WindowID)
 }

@@ -9,7 +9,7 @@ import SplitKitModel
 /// finds the key window. In focus mode Esc leaves it (§7.3), through `onExitCommand`. Limits: SwiftUI only
 /// delivers Esc here when nothing deeper in the responder chain handled it, so a content whose first
 /// responder consumes Esc keeps it, and Esc typed while keyboard focus is outside this window's SwiftUI
-/// hierarchy does not arrive. ⌃⌘F and the header toggle always work.
+/// hierarchy does not arrive. ⇧⌘↩ and the header toggle always work.
 public struct SplitKitView: View {
     let workspace: SplitKitWorkspace
     let window: WindowID
@@ -62,6 +62,12 @@ enum ChromeText {
     static let add = "Add"
     static let detach = "Detach"
     static let moveToWindow = "Move to Window"
+    static let replaceContent = "Replace Content…"
+    static let dockBack = "Dock Back"
+    /// The third button of a detached window's close prompt (spec §9).
+    static let dockBackInstead = "Dock Back Instead"
+    /// A window without content in the Move to Window submenu.
+    static let emptyWindowTitle = "Empty Window"
     static let split = "Split"
     static let splitRight = "Split Right"
     static let splitDown = "Split Down"

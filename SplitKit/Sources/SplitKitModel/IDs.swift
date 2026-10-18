@@ -59,7 +59,7 @@ extension DropEdge {
 }
 
 extension ContentID {
-    /// Carried by `LayoutError.unknownContent` when `detach` names an empty pane: §6.2 prescribes
-    /// `unknownContent`, but an empty pane has no `ContentID`, so the all-zero UUID stands in.
-    static let emptyPane = ContentID(raw: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+    /// Carried by `LayoutError.unknownContent` when `detach` (or Replace Content, Move to Window) names an empty
+    /// pane: §6.2 prescribes `unknownContent`, but an empty pane has no `ContentID`, so the all-zero UUID stands in.
+    package static let emptyPane = ContentID(raw: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 }

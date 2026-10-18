@@ -84,3 +84,39 @@ private let external = ScreenAdapter.Screen(id: "external", frame: CGRect(x: -19
         #expect(written.map { DisplayPlacement.resolve($0, minSize: .zero, displays: two) } == onExternal)
     }
 }
+
+/// Where a detached window opens (§9): the source frame offset by 24 pt, resolved with the content minimum.
+@MainActor @Suite struct DetachPlacementTests {
+    let displays = ScreenAdapter.displays([laptop, external])
+
+    @Test func theSourceFrameIsOffsetBy24PointsDownAndRight() {
+        let placement = DetachPlacement.placement(from: CGRect(x: 100, y: 300, width: 800, height: 600),
+                                                  contentMinSize: CGSize(width: 200, height: 120), displays: displays)
+        #expect(placement.intendedFrame == CGRect(x: 124, y: 276, width: 800, height: 600))
+        #expect(placement.displayID == "laptop" && placement.relativeOrigin == CGPoint(x: 124, y: 276))
+    }
+
+    @Test func theFrameIsResolvedInsideTheVisibleFrame() {
+        let placement = DetachPlacement.placement(from: CGRect(x: 600, y: 0, width: 800, height: 600),
+                                                  contentMinSize: .zero, displays: displays)
+        #expect(placement.intendedFrame == CGRect(x: 624, y: 0, width: 800, height: 600), "moved below the display, pulled back in")
+        let right = DetachPlacement.placement(from: CGRect(x: 800, y: 300, width: 800, height: 600),
+                                              contentMinSize: .zero, displays: displays)
+        #expect(right.intendedFrame.maxX <= 1512, "pulled left to stay fully on the display")
+    }
+
+    @Test func theContentMinimumRaisesASmallSource() {
+        let placement = DetachPlacement.placement(from: CGRect(x: 100, y: 300, width: 100, height: 100),
+                                                  contentMinSize: CGSize(width: 400, height: 300), displays: displays)
+        #expect(placement.intendedFrame.width == 400)
+        #expect(placement.intendedFrame.height > 300, "the minimum is the content's: the title bar comes on top")
+    }
+
+    @Test func thePlacementResolvesToItselfAndNoDisplaysKeepTheOffsetFrame() {
+        let placement = DetachPlacement.placement(from: CGRect(x: 100, y: 300, width: 800, height: 600),
+                                                  contentMinSize: CGSize(width: 200, height: 120), displays: displays)
+        #expect(DisplayPlacement.resolve(placement, minSize: .zero, displays: displays) == placement.intendedFrame)
+        let none = DetachPlacement.placement(from: CGRect(x: 100, y: 300, width: 800, height: 600), contentMinSize: .zero, displays: [])
+        #expect(none.intendedFrame == CGRect(x: 124, y: 276, width: 800, height: 600) && none.displayID == nil)
+    }
+}

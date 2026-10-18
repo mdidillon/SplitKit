@@ -77,8 +77,8 @@ public struct ShortcutMap: Equatable, Sendable {
         .moveRight: KeyboardShortcut(.rightArrow, modifiers: [.control, .option, .command]),
         .moveUp: KeyboardShortcut(.upArrow, modifiers: [.control, .option, .command]),
         .moveDown: KeyboardShortcut(.downArrow, modifiers: [.control, .option, .command]),
-        .focusPane: KeyboardShortcut("f", modifiers: [.control, .command]),
-        .detach: KeyboardShortcut("d", modifiers: [.option, .command]),
+        .focusPane: KeyboardShortcut(.return, modifiers: [.shift, .command]),
+        .detach: KeyboardShortcut("d", modifiers: [.shift, .option, .command]),
         .closePane: KeyboardShortcut("w", modifiers: .command),
         .closeWindow: KeyboardShortcut("w", modifiers: [.command, .shift]),
     ])
@@ -123,11 +123,6 @@ public struct ShortcutMap: Equatable, Sendable {
         ReservedShortcut("Cycle Through Windows", KeyboardShortcut("`", modifiers: .command)),
         ReservedShortcut("Cycle Through Windows Backwards", KeyboardShortcut("`", modifiers: [.shift, .command])),
         ReservedShortcut("Help", KeyboardShortcut("/", modifiers: [.shift, .command])),
-    ]
-
-    /// System shortcuts that the §7.5 table itself overlaps (a deviation candidate for Marc, not part of
-    /// `standardMacOS`): ⌃⌘F is View ▸ Enter Full Screen and ⌥⌘D is the system-wide Dock hiding toggle.
-    public static let systemOverlaps: [ReservedShortcut] = [
         ReservedShortcut("Enter Full Screen", KeyboardShortcut("f", modifiers: [.control, .command])),
         ReservedShortcut("Turn Dock Hiding On/Off", KeyboardShortcut("d", modifiers: [.option, .command])),
     ]

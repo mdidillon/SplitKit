@@ -116,6 +116,50 @@ struct PaneCloseTests {
     }
 }
 
+@Suite("§6.3.6 replace content")
+struct ReplaceContentTests {
+    /// Main: H[A(c1) 0.25, B(c2) 0.75, C(empty)] with B active; detached 2: D(c4).
+    let s = session(mainWindow(1, h(1, [p(1, 1), p(2, 2), p(3)], [0.25, 0.5, 0.25]), active: 2), detachedWindow(2, p(4, 4)))
+
+    @Test func commitReplacesInPlace() throws {
+        let begun = try apply(.beginClose(pid(2)), to: s)
+        let r = try apply(.commitReplace(pid(2), with: new(9)), to: begun.session, runtime: begun.runtime)
+        #expect(r.session.root == h(1, [p(1, 1), p(2, 9), p(3)], [0.25, 0.5, 0.25]), "PaneID, position and fraction are kept")
+        #expect(r.released == [cid(2)])
+        #expect(r.session.contents.map(\.id) == [cid(1), cid(4), cid(9)])
+        #expect(r.session.contents.last == record(cid(9)))
+        #expect(r.runtime == WorkspaceRuntime())
+        #expect(r.session.windows[0].activePane == pid(2))
+        #expect(r.windowsCreated.isEmpty && r.windowsClosed.isEmpty && r.normalizations.isEmpty)
+    }
+
+    @Test func replacesTheOnlyContentOfADetachedWindow() throws {
+        let begun = try apply(.beginClose(pid(4)), to: s)
+        let r = try apply(.commitReplace(pid(4), with: new(9)), to: begun.session, runtime: begun.runtime)
+        #expect(r.session.window(wid(2))?.root == p(4, 9))
+        #expect(r.windowsClosed.isEmpty)
+    }
+
+    @Test func replacesAnUnavailablePlaceholder() throws {
+        var u = s
+        u.contents[1].availability = .unavailable
+        let begun = try apply(.beginClose(pid(2)), to: u)
+        let r = try apply(.commitReplace(pid(2), with: new(9)), to: begun.session, runtime: begun.runtime)
+        #expect(r.released == [cid(2)])
+        #expect(r.session.contents.contains { $0.id == cid(9) && $0.availability == .hosted })
+    }
+
+    @Test func failuresLeaveSessionAndRuntimeUnchanged() {
+        expectFailure(.commitReplace(pid(99), with: new(9)), on: s, runtime: pendingPane(99), .unknownPane(pid(99)))
+        expectFailure(.commitReplace(pid(2), with: new(9)), on: s, .noCloseInProgress(pid(2)))
+        expectFailure(.commitReplace(pid(3), with: new(9)), on: s, runtime: pendingPane(3), .unknownContent(.emptyPane))
+        expectFailure(.commitReplace(pid(2), with: new(1)), on: s, runtime: pendingPane(2), .contentAlreadyHosted(cid(1)))
+        expectFailure(.commitReplace(pid(2), with: new(2)), on: s, runtime: pendingPane(2), .contentAlreadyHosted(cid(2)))
+        expectFailure(.commitReplace(pid(2), with: new(9)), on: s,
+                      runtime: WorkspaceRuntime(pendingCloses: [pid(2)], pendingWindowCloses: [wid(1)]), .windowClosePending(wid(1)))
+    }
+}
+
 @Suite("§6.3.4 window close")
 struct WindowCloseTests {
     /// Main 1: H[A(c1), B, C(c3)]; detached 2: V[D(c4), E(c5)].
