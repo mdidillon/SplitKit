@@ -19,7 +19,7 @@ extension SplitKitWorkspace {
             isFocusMode: window.focusModePane == pane,
             menu: AnyView(PaneMenu(workspace: self, model: paneMenuModel(for: pane, content: content))),
             region: { title, decorate in
-                AnyView(PaneToolbarRegion(items: items, isActive: isActive, title: title,
+                AnyView(PaneToolbarRegion(items: items, title: title,
                                           decorateToolbar: { decorate(.init(content: $0)) }))
             },
             toggleFocusMode: { [self] in send(.toggleFocusMode(pane)) },

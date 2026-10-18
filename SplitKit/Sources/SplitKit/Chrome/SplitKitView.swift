@@ -4,6 +4,12 @@ import SplitKitModel
 
 /// One window of a workspace (§5, §9 `.host` mode): its split tree, or the empty state of a main window
 /// without panes. Renders nothing for a window that is not in the session.
+///
+/// It publishes its `WindowID` as the focused scene value `splitKitWindow`, which is how `SplitKitCommands`
+/// finds the key window. In focus mode Esc leaves it (§7.3), through `onExitCommand`. Limits: SwiftUI only
+/// delivers Esc here when nothing deeper in the responder chain handled it, so a content whose first
+/// responder consumes Esc keeps it, and Esc typed while keyboard focus is outside this window's SwiftUI
+/// hierarchy does not arrive. ⌃⌘F and the header toggle always work.
 public struct SplitKitView: View {
     let workspace: SplitKitWorkspace
     let window: WindowID
@@ -24,6 +30,11 @@ public struct SplitKitView: View {
             }
         }
         .closePrompt(of: workspace, in: window)
+        .contentPicker(workspace.contentPicker(for: workspace.addContentTarget(in: window)), in: workspace,
+                       isPresented: Binding(get: { workspace.addContentRequest == window },
+                                            set: { if !$0 { workspace.cancelAddContent(in: window) } }))
+        .onExitCommand(perform: workspace.exitFocusModeAction(in: window))
+        .focusedSceneValue(\.splitKitWindow, window)
     }
 }
 
@@ -51,8 +62,26 @@ enum ChromeText {
     static let add = "Add"
     static let detach = "Detach"
     static let moveToWindow = "Move to Window"
+    static let split = "Split"
     static let splitRight = "Split Right"
     static let splitDown = "Split Down"
+    static let paneMenu = "Pane"
+    static let addContentCommand = "Add Content…"
+    static let moveFocus = "Move Focus"
+    static let moveToEdge = "Move Pane to Edge"
+    /// The title of ⌘W where the window is empty (spec §7.5), and of ⇧⌘W.
+    static let closeWindow = "Close Window"
+    /// The title of ⌘W in a detached window with one pane (spec §7.5).
+    static let closePaneAndWindow = "Close Pane and Window"
+
+    static func direction(_ direction: FocusDirection) -> String {
+        switch direction {
+        case .left: "Left"
+        case .right: "Right"
+        case .up: "Up"
+        case .down: "Down"
+        }
+    }
     static let restore = "Restore"
     static let close = "Close"
     static let cancel = "Cancel"

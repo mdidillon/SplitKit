@@ -157,6 +157,37 @@ extension SplitKitWorkspace {
     }
 }
 
+extension LayoutNode {
+    /// The tree as text: `p` per pane, `H(…)` / `V(…)` per split with its children in order.
+    var shape: String {
+        switch self {
+        case .pane: "p"
+        case let .split(_, axis, children, _): (axis == .horizontal ? "H" : "V") + "(" + children.map(\.shape).joined(separator: ",") + ")"
+        }
+    }
+}
+
+extension SplitKitWorkspace {
+    /// Runs `action` as the menu bar would: the model of the active pane of `window`.
+    func key(_ action: PaneMenuModel.Action, in window: WindowID) async {
+        await activePaneMenuModel(in: window).run(action, in: self)
+    }
+
+    /// File ▸ Add Content… (⇧⌘N), then Return on the first row of the type list (or on `type`'s row, reached
+    /// with ↓): the same path as the popover.
+    func addContentByKeyboard(_ type: ContentType = TestContent.type, in window: WindowID) async {
+        await key(.chooseContent, in: window)
+        guard addContentRequest == window else { Issue.record("⇧⌘N did not open the type list"); return }
+        let picker = contentPicker(for: addContentTarget(in: window))
+        var highlighted = picker.moving(nil, by: 1)
+        while let current = highlighted, current != type, let next = picker.moving(current, by: 1), next != current {
+            highlighted = next
+        }
+        guard let highlighted else { Issue.record("empty type list"); return }
+        await chooseRequestedContent(highlighted, in: window)
+    }
+}
+
 /// A toolbar layout entry.
 func toolbarEntry(_ id: String, _ priority: PaneToolbarItem.Priority, _ width: CGFloat = 30) -> PaneToolbarLayout.Entry {
     .init(id: id, priority: priority, width: width)

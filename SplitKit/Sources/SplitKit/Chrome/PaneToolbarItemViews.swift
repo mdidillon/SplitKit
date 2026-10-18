@@ -13,10 +13,10 @@ extension PaneToolbarItem {
 }
 
 extension View {
-    /// An item's keyboard shortcut is live only while its pane is active (spec §7.4, §7.5).
+    /// `shortcut` as this view's keyboard shortcut, if there is one.
     @ViewBuilder
-    fileprivate func paneShortcut(_ shortcut: KeyboardShortcut?, isActive: Bool) -> some View {
-        if isActive, let shortcut {
+    func optionalKeyboardShortcut(_ shortcut: KeyboardShortcut?) -> some View {
+        if let shortcut {
             keyboardShortcut(shortcut)
         } else {
             self
@@ -25,16 +25,15 @@ extension View {
 }
 
 /// One toolbar item in the header row: icon-only when it has a `systemImage` (the title stays its tooltip
-/// and VoiceOver label), otherwise its title text (Docs/Design.md §6).
+/// and VoiceOver label), otherwise its title text (Docs/Design.md §6). Its keyboard shortcut is registered
+/// only by the menu bar's Pane ▸ ‹Content name› ▸ entries, which exist for the active pane alone (§7.4).
 struct PaneToolbarItemView: View {
     let item: PaneToolbarItem
-    let isActive: Bool
 
     var body: some View {
         content
             .disabled(!item.isEnabled)
             .help(item.title)
-            .paneShortcut(item.keyboardShortcut, isActive: isActive)
     }
 
     @ViewBuilder private var content: some View {
@@ -46,7 +45,7 @@ struct PaneToolbarItemView: View {
                 .toggleStyle(.button)
         case let .menu(items):
             Menu {
-                PaneToolbarMenuEntries(items: items, isActive: false)
+                PaneToolbarMenuEntries(items: items)
             } label: {
                 label
             }
@@ -69,15 +68,17 @@ struct PaneToolbarItemView: View {
 
 /// Toolbar items as menu entries: the overflow ⋯ menu and the submenu of a `.menu` item (spec §7.4).
 /// `.button`, `.toggle` and `.menu` map one to one; `.custom` becomes its `title` + `fallbackAction`.
+/// With `shortcuts` (the menu bar) the items register their keyboard shortcuts, except one that collides
+/// with a SplitKit shortcut: that one loses (spec §7.4).
 struct PaneToolbarMenuEntries: View {
     let items: [PaneToolbarItem]
-    let isActive: Bool
+    var shortcuts: ShortcutMap?
 
     var body: some View {
         ForEach(items) { item in
             entry(item)
                 .disabled(!item.isEnabledInOverflow)
-                .paneShortcut(item.keyboardShortcut, isActive: isActive)
+                .optionalKeyboardShortcut(shortcuts?.contentShortcut(item.keyboardShortcut, itemTitle: item.title))
         }
     }
 
@@ -89,7 +90,7 @@ struct PaneToolbarMenuEntries: View {
             Toggle(isOn: isOn) { title(item) }
         case let .menu(items):
             Menu {
-                PaneToolbarMenuEntries(items: items, isActive: isActive)
+                PaneToolbarMenuEntries(items: items, shortcuts: shortcuts)
             } label: {
                 title(item)
             }
@@ -112,7 +113,6 @@ struct PaneToolbarMenuEntries: View {
 /// `PaneToolbarLayout` what fits and draws only that.
 struct PaneToolbarRegion: View {
     let items: [PaneToolbarItem]
-    let isActive: Bool
     let title: AnyView
     /// The look's treatment of the item group (its glass capsule); supplied by the header style.
     let decorateToolbar: (AnyView) -> AnyView
@@ -160,16 +160,16 @@ struct PaneToolbarRegion: View {
     private var toolbar: some View {
         let layout = layout
         return HStack(spacing: Constants.headerItemSpacing) {
-            ForEach(items(layout.visible)) { PaneToolbarItemView(item: $0, isActive: isActive) }
+            ForEach(items(layout.visible)) { PaneToolbarItemView(item: $0) }
             if !layout.overflow.isEmpty {
-                overflowMenu(items(layout.overflow), isActive: isActive)
+                overflowMenu(items(layout.overflow))
             }
         }
     }
 
-    private func overflowMenu(_ items: [PaneToolbarItem], isActive: Bool) -> some View {
+    private func overflowMenu(_ items: [PaneToolbarItem]) -> some View {
         Menu {
-            PaneToolbarMenuEntries(items: items, isActive: isActive)
+            PaneToolbarMenuEntries(items: items)
         } label: {
             Label(Constants.Accessibility.overflowLabel, systemImage: Constants.Symbols.overflow)
                 .labelStyle(.iconOnly)
@@ -184,11 +184,11 @@ struct PaneToolbarRegion: View {
                 .fixedSize()
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.width }, action: { titleWidth = $0 })
             ForEach(items) { item in
-                PaneToolbarItemView(item: item, isActive: false)
+                PaneToolbarItemView(item: item)
                     .fixedSize()
                     .onGeometryChange(for: CGFloat.self, of: { $0.size.width }, action: { itemWidths[item.id] = $0 })
             }
-            overflowMenu(items, isActive: false)
+            overflowMenu(items)
                 .fixedSize()
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.width }, action: { overflowWidth = $0 })
         }

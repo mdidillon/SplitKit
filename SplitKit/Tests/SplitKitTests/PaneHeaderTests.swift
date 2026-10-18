@@ -124,7 +124,7 @@ import SplitKitModel
 
     @Test func closeRemovesThePane() async throws {
         let pane = try await addFirst()
-        await menu(pane).run(.close, in: workspace)
+        await menu(pane).run(.closePane, in: workspace)
         #expect(workspace.mainLeaves.isEmpty)
     }
 
@@ -143,7 +143,7 @@ import SplitKitModel
         _ = try workspace.commit(.beginClose(pane))
         let model = menu(pane)
         #expect(model.isPending)
-        let actions: [PaneMenuModel.Action] = [.addContent(TestContent.type), .split(.right), .split(.bottom), .detach, .moveToWindow, .close]
+        let actions: [PaneMenuModel.Action] = [.addContent(TestContent.type), .split(.right), .split(.bottom), .detach, .moveToWindow, .closePane]
         #expect(actions.allSatisfy { !model.isEnabled($0) })
         let session = try Migrator.encode(workspace.session)
         let runtime = workspace.runtime

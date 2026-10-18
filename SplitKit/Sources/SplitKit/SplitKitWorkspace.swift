@@ -21,6 +21,8 @@ public final class SplitKitWorkspace {
     private(set) var closePrompt: ClosePrompt?
     @ObservationIgnored private var closePrompts: [(prompt: ClosePrompt, answer: CheckedContinuation<Bool, Never>)] = []
     @ObservationIgnored private var closePromptCount = 0
+    /// The window whose Add Content… type list (⇧⌘N) is open; runtime-only, never persisted.
+    private(set) var addContentRequest: WindowID?
 
     public convenience init(registry: ContentRegistry, configuration: SplitKitConfiguration) throws(PersistenceError) {
         self.init(registry: registry, configuration: configuration, ids: SystemIDGenerator())
@@ -40,6 +42,7 @@ public final class SplitKitWorkspace {
         for record in session.contents { store.release(record.id) }
         session = Session()
         runtime = WorkspaceRuntime()
+        addContentRequest = nil
         do {
             try commit(.openMainWindow(WindowID(raw: ids.next()), placement: .defaultMainWindow))
         } catch {
@@ -123,6 +126,48 @@ public final class SplitKitWorkspace {
             throw .creationFailed(type, .other("layout: no new pane"))
         }
         try await addContent(type, url: nil, into: new)
+    }
+
+    // MARK: Add Content… and focus mode (§7.3, §7.5)
+
+    /// Where Add Content goes in `window`: its active pane, or the empty window.
+    func addContentTarget(in window: WindowID) -> ContentPicker.Target {
+        guard let layout = windowLayout(window) else { return .none }
+        guard let root = layout.root else { return layout.kind == .main ? .emptyWindow : .none }
+        guard let leaf = root.leaves.first(where: { $0.pane == layout.activePane }) else { return .none }
+        return .adding(to: leaf.pane, hosting: leaf.content)
+    }
+
+    /// Opens the type list of `window` (File ▸ Add Content…).
+    func requestAddContent(in window: WindowID) {
+        addContentRequest = window
+    }
+
+    /// Closes the type list of `window` without adding anything.
+    func cancelAddContent(in window: WindowID) {
+        if addContentRequest == window { addContentRequest = nil }
+    }
+
+    /// Chooses `type` in the open type list of `window`: closes the list, then adds at the target the
+    /// window has now. The one path for the popover's rows, its Return key and the tests.
+    func chooseRequestedContent(_ type: ContentType, in window: WindowID) async {
+        cancelAddContent(in: window)
+        await contentPicker(for: addContentTarget(in: window)).choose(type, in: self)
+    }
+
+    /// What Esc does in `window`: leave focus mode. Nil when the window isn't in focus mode, so SplitKit
+    /// doesn't take Esc from anything else.
+    func exitFocusModeAction(in window: WindowID) -> (@MainActor () -> Void)? {
+        guard windowLayout(window)?.focusModePane != nil else { return nil }
+        return { [self] in send(.setFocusMode(nil, in: window)) }
+    }
+
+    /// The pane that hosts `content` and its window.
+    func host(of content: ContentID) -> (pane: PaneID, window: WindowID)? {
+        for window in session.windows {
+            if let leaf = window.root?.leaves.first(where: { $0.content == content }) { return (leaf.pane, window.id) }
+        }
+        return nil
     }
 
     // MARK: Lookups

@@ -58,7 +58,7 @@ import SplitKitModel
         #expect(workspace.runtime.pendingCloses == [pane])
         #expect(header(pane).isPendingClose && !header(other.pane).isPendingClose)
         let model = menu(pane)
-        let actions: [PaneMenuModel.Action] = [.addContent(TestContent.type), .split(.right), .split(.bottom), .detach, .moveToWindow, .close]
+        let actions: [PaneMenuModel.Action] = [.addContent(TestContent.type), .split(.right), .split(.bottom), .detach, .moveToWindow, .closePane]
         #expect(actions.allSatisfy { !model.isEnabled($0) })
         #expect(!model.picker.isEnabled)
         #expect(header(pane).controlsDisabled)
@@ -125,7 +125,7 @@ import SplitKitModel
 
     @Test func closingTheLastPaneLeavesTheEmptyStateAndTheWindowStays() async throws {
         let (pane, content) = try await add()
-        await menu(pane).run(.close, in: workspace)
+        await menu(pane).run(.closePane, in: workspace)
         #expect(workspace.mainLayout.root == nil)
         #expect(workspace.session.windows.count == 1 && workspace.session.contents.isEmpty)
         #expect(content.willReleaseCalls == 1)

@@ -1,6 +1,22 @@
 import CoreGraphics
 import SplitKitModel
 
+/// An arrow direction in a window: ⌥⌘-arrows move the active pane, ⌃⌥⌘-arrows move its content (§7.5).
+enum FocusDirection: CaseIterable, Hashable {
+    case left, right, up, down
+
+    /// The drop edge on the side of a pane that faces this direction's far side: moving a pane `right` of
+    /// its neighbour drops it at the neighbour's `.right` edge.
+    var edge: DropEdge {
+        switch self {
+        case .left: .left
+        case .right: .right
+        case .up: .top
+        case .down: .bottom
+        }
+    }
+}
+
 /// Pure layout maths behind `SplitKitView` (§6.1.4): fractions → frames, minimum-size compression and
 /// divider drags. Works in SwiftUI's local space (origin top-left, y down): `.horizontal` lays children
 /// out left to right, `.vertical` top to bottom. Stored fractions are never rewritten here; a drag only
@@ -147,6 +163,41 @@ enum SplitGeometry {
         guard let pane, var focused = layout.panes.first(where: { $0.pane == pane }) else { return layout }
         focused.frame = rect
         return Layout(panes: [focused], dividers: [])
+    }
+
+    // MARK: Neighbours
+
+    /// The pane that ⌥⌘-arrow focus movement and ⌃⌥⌘-arrow moves go to (§7.5). The tree is laid out in a
+    /// unit square from its stored fractions (no minimum sizes, no window size), so the rule is the same in
+    /// every window size. A candidate lies wholly beyond `pane`'s edge in `direction` and overlaps `pane`'s
+    /// extent across that direction. The winner has the smallest gap, then the largest overlap, then comes
+    /// first in tree order. Nil when no pane qualifies (or `pane` isn't in the tree).
+    static func neighbour(of pane: PaneID, toward direction: FocusDirection, in root: LayoutNode) -> PaneID? {
+        let unit = CGRect(x: 0, y: 0, width: 1, height: 1)
+        let cells = layout(root, in: unit, dividerHitWidth: 0, paneMinimum: { _ in .zero }).panes
+        guard let from = cells.first(where: { $0.pane == pane })?.frame else { return nil }
+        let epsilon: CGFloat = 1e-9
+        var best: (pane: PaneID, gap: CGFloat, overlap: CGFloat)?
+        for cell in cells where cell.pane != pane {
+            let frame = cell.frame
+            let gap: CGFloat, overlap: CGFloat
+            switch direction {
+            case .right: (gap, overlap) = (frame.minX - from.maxX, overlapLength(frame.minY, frame.maxY, from.minY, from.maxY))
+            case .left: (gap, overlap) = (from.minX - frame.maxX, overlapLength(frame.minY, frame.maxY, from.minY, from.maxY))
+            case .down: (gap, overlap) = (frame.minY - from.maxY, overlapLength(frame.minX, frame.maxX, from.minX, from.maxX))
+            case .up: (gap, overlap) = (from.minY - frame.maxY, overlapLength(frame.minX, frame.maxX, from.minX, from.maxX))
+            }
+            guard gap > -epsilon, overlap > epsilon else { continue }
+            if let current = best, gap > current.gap + epsilon || (gap > current.gap - epsilon && overlap <= current.overlap + epsilon) {
+                continue
+            }
+            best = (cell.pane, gap, overlap)
+        }
+        return best?.pane
+    }
+
+    private static func overlapLength(_ aMin: CGFloat, _ aMax: CGFloat, _ bMin: CGFloat, _ bMax: CGFloat) -> CGFloat {
+        min(aMax, bMax) - max(aMin, bMin)
     }
 
     // MARK: Divider drag
