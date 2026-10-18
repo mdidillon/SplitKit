@@ -41,6 +41,7 @@ private let unknownType = "vendor.unknown"
             let restoredA = try #require(second.store[a] as? CounterContent)
             #expect(restoredA.count == 7)
             #expect(restoredA.restoredStateVersion == CounterContent.stateVersion)
+            #expect(restoredA.receivedURL == nil, "restore passes no URL")
             #expect((second.store[b] as? CounterContent)?.count == 9)
             #expect(second.mainLayout.activePane == second.mainLeaves[1].pane)
         }

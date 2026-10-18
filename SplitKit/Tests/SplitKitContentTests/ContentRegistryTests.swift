@@ -19,9 +19,12 @@ class DoubleContent: PaneContent {
     let id: ContentID
     let restoredState: Data?
     let restoredVersion: Int?
+    /// What `init` was given as `url`.
+    let receivedURL: URL?
 
-    required init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    required init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         self.id = id
+        receivedURL = url
         restoredState = state
         restoredVersion = stateVersion
     }
@@ -60,8 +63,19 @@ final class ImpostorDouble: DoubleContent {
 final class FailingDouble: DoubleContent {
     override class var type: ContentType { ContentType(raw: "test.failing") }
 
-    required init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    required init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         throw .stateIncompatible(version: stateVersion ?? -1)
+    }
+}
+
+/// Rejects every URL in `init`, like a content that validates the file up front.
+@MainActor @Observable
+final class URLRejectingDouble: DoubleContent {
+    override class var type: ContentType { ContentType(raw: "test.rejecting") }
+
+    required init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+        if let url { throw .unsupportedFile(url, reason: "not a supported file") }
+        try super.init(id: id, url: url, restoring: state, stateVersion: stateVersion)
     }
 }
 
@@ -152,6 +166,29 @@ final class FailingDouble: DoubleContent {
         let image = try #require(content as? ImageDouble)
         #expect(image.restoredState == state)
         #expect(image.restoredVersion == 2)
+    }
+
+    @Test func makeForwardsTheURLToInit() throws {
+        try registry.register(ImageDouble.self)
+        let url = URL(fileURLWithPath: "/tmp/a.png")
+        let image = try #require(try registry.make(ImageDouble.type, id: id, url: url, state: nil, stateVersion: nil) as? ImageDouble)
+        #expect(image.receivedURL == url)
+        let restored = try #require(try registry.make(ImageDouble.type, id: id, url: nil, state: Data([1]), stateVersion: 3) as? ImageDouble)
+        #expect(restored.receivedURL == nil)
+    }
+
+    @Test func aURLRejectedByInitSurfacesAsCreationFailed() throws {
+        try registry.register(URLRejectingDouble.self)
+        let url = URL(fileURLWithPath: "/tmp/a.xyz")
+        do {
+            _ = try registry.make(URLRejectingDouble.type, id: id, url: url, state: nil, stateVersion: nil)
+            Issue.record("expected creationFailed")
+        } catch {
+            guard case .creationFailed(let type, .unsupportedFile(let rejected, _)) = error else { Issue.record("wrong error \(error)"); return }
+            #expect(type == URLRejectingDouble.type)
+            #expect(rejected == url)
+        }
+        _ = try registry.make(URLRejectingDouble.type, id: id, url: nil, state: nil, stateVersion: nil)
     }
 
     @Test func makeCreatesTheRegisteredConcreteType() throws {

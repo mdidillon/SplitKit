@@ -22,7 +22,7 @@ public enum RegistryError: Error, Sendable {
     private struct Entry {
         let metadata: Metadata
         let accepts: [UTType]
-        let create: @MainActor (ContentID, Data?, Int?) throws(ContentError) -> any PaneContent
+        let create: @MainActor (ContentID, URL?, Data?, Int?) throws(ContentError) -> any PaneContent
     }
 
     private var entries: [Entry] = []                        // registration order
@@ -43,8 +43,8 @@ public enum RegistryError: Error, Sendable {
                 stateVersion: C.stateVersion
             ),
             accepts: accepts,
-            create: { (id, state, stateVersion) throws(ContentError) -> any PaneContent in
-                try C(id: id, restoring: state, stateVersion: stateVersion)
+            create: { (id, url, state, stateVersion) throws(ContentError) -> any PaneContent in
+                try C(id: id, url: url, restoring: state, stateVersion: stateVersion)
             }
         ))
     }
@@ -58,11 +58,11 @@ public enum RegistryError: Error, Sendable {
         return entries.first { entry in entry.accepts.contains { fileType.conforms(to: $0) } }?.metadata.type
     }
 
-    /// `url` is accepted per §5, but `PaneContent.init` has no URL parameter, so it is not forwarded (open spec question).
+    /// Forwards `url` to `init`, which validates it; a `ContentError` thrown there becomes `.creationFailed` (spec §5, §6.5).
     public func make(_ type: ContentType, id: ContentID, url: URL?, state: Data?, stateVersion: Int?) throws(RegistryError) -> any PaneContent {
         guard let entry = entries.first(where: { $0.metadata.type == type }) else { throw .unknownType(type) }
         do {
-            return try entry.create(id, state, stateVersion)
+            return try entry.create(id, url, state, stateVersion)
         } catch {
             throw .creationFailed(type, error)
         }

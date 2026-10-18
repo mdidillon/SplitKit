@@ -116,6 +116,40 @@ import SplitKitModel
         #expect(window.root == nil)
     }
 
+    @Test func addContentPassesTheURLIntoInit() async throws {
+        let url = URL(filePath: "/tmp/a.test")
+        try await workspace.addContent(TestContent.type, url: url, into: nil)
+        #expect(object(leaves.first?.content)?.receivedURL == url)
+    }
+
+    @Test func aURLRejectedByInitChangesNothing() async throws {
+        try workspace.registry.register(PickyContent.self)
+        let url = URL(filePath: "/tmp/a.test")
+        let intoWindow = try await expectNoChange {
+            try await workspace.addContent(PickyContent.type, url: url, into: nil)
+        }
+        guard case .creationFailed(let type, .unsupportedFile(let rejected, _)) = intoWindow as? RegistryError else {
+            Issue.record("wrong error \(String(describing: intoWindow))"); return
+        }
+        #expect(type == PickyContent.type)
+        #expect(rejected == url)
+        #expect(window.root == nil)
+        #expect(workspace.session.contents.isEmpty)
+
+        let first = try await addFirst()
+        try await workspace.perform(.split(first, edge: .right))
+        let empty = try #require(leaves.last?.pane)
+        _ = try await expectNoChange {
+            try await workspace.addContent(PickyContent.type, url: url, into: empty)
+        }
+        #expect(leaves.map(\.pane) == [first, empty])
+        #expect(content(in: empty) == nil)
+        #expect(workspace.session.contents.count == 1)
+
+        try await workspace.addContent(PickyContent.type, url: nil, into: empty)
+        #expect(content(in: empty) != nil)
+    }
+
     @Test func addContentIntoAnOccupiedPaneCreatesNoObject() async throws {
         let pane = try await addFirst()
         let error = try await expectNoChange {

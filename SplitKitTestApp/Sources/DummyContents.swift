@@ -48,7 +48,7 @@ final class ColorContent: PaneContent {
 
     var swatch: Swatch
 
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         swatch = try decodeState(State.self, from: state, stateVersion: stateVersion)?.swatch ?? Swatch.allCases.randomElement()!
     }
 
@@ -96,7 +96,7 @@ final class CounterContent: PaneContent {
 
     var count: Int
 
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         count = try decodeState(State.self, from: state, stateVersion: stateVersion)?.count ?? 0
     }
 

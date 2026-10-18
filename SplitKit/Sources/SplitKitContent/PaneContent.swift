@@ -12,7 +12,8 @@ import SplitKitModel
     static var systemImage: String { get }
     static var minimumSize: CGSize { get }                   // points
     static var stateVersion: Int { get }
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError)
+    /// `url` is the file to open, validated here (throw `.unsupportedFile` / `.unreadable`); nil for restore and new empty content.
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError)
     var title: String { get }
     var toolbarItems: [PaneToolbarItem] { get }              // observed; changes re-render the header
     func makeView() -> AnyView                               // may be called again after re-hosting

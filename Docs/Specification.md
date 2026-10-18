@@ -296,7 +296,8 @@ public enum InvariantViolation: Equatable, Sendable {
     static var systemImage: String { get }
     static var minimumSize: CGSize { get }                   // points
     static var stateVersion: Int { get }
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError)
+    /// `url` is the file to open, validated here (throw `.unsupportedFile` / `.unreadable`); nil for restore and for new empty content.
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError)
     var title: String { get }
     var toolbarItems: [PaneToolbarItem] { get }              // observed; changes re-render the header
     func makeView() -> AnyView                               // may be called again after re-hosting
@@ -332,6 +333,8 @@ public enum ContentError: Error, Sendable {
     public func register<C: PaneContent>(_ type: C.Type, accepts: [UTType] = []) throws(RegistryError)
     public var registeredTypes: [ContentType] { get }
     public func type(for url: URL) -> ContentType?           // first registered match wins; deterministic order
+    /// Forwards `url` to `init(id:url:restoring:stateVersion:)`; a `ContentError` thrown there (e.g. `unsupportedFile`,
+    /// `unreadable`) surfaces as `RegistryError.creationFailed(type, error)`.
     public func make(_ type: ContentType, id: ContentID, url: URL?, state: Data?, stateVersion: Int?) throws(RegistryError) -> any PaneContent
 }
 public enum RegistryError: Error, Sendable {
@@ -453,7 +456,7 @@ The engine computes everything purely first; side effects happen only after succ
 2. **Accepted →** `commitClose(P)`: the pane is removed (collapse/flatten), its `ContentRecord` is removed, and `released = [contentID]`. The host calls `willRelease()`, then drops the object, and a snapshot is taken. (An `.unavailable` placeholder has no object: SplitKit shows its own confirmation instead of `shouldClose()` and calls no `willRelease()`.)
    **Declined →** `cancelClose(P)`: the pending flag is cleared, and **everything else is untouched**.
 3. **While pending:** any transaction that touches P (move, swap, detach, a resize of its parent, a second close) throws `paneClosePending`, except a self-drop on P, which stays a no-op (§6.2). UI drags from P are disabled. Transactions elsewhere proceed normally, because P's `PaneID` is stable.
-4. **Closing a window with N contents:** `beginCloseWindow(W)` adds W to `WorkspaceRuntime.pendingWindowCloses` (tree unchanged); it throws `paneClosePending` if any pane in W is already pending. While W is pending, every transaction touching W or its panes throws `windowClosePending`. SplitKit asks each hosted content in tree order (depth-first) with `shouldClose()`; `.unavailable` placeholders and empty panes are not asked (the window prompt covers them, §7.5). If **any declines**, `cancelCloseWindow(W)` and **nothing is closed**. If all accept, `commitCloseWindow(W)` removes W, releases all its contents and removes their records in one transaction. A window with no hosted content commits without asking.
+4. **Closing a window with N contents:** `beginCloseWindow(W)` adds W to `WorkspaceRuntime.pendingWindowCloses` (tree unchanged); it throws `paneClosePending` if any pane in W is already pending. While W is pending, every transaction touching W or its panes throws `windowClosePending`. SplitKit asks each hosted content in tree order (depth-first) with `shouldClose()`; `.unavailable` placeholders and empty panes are not asked `shouldClose()`. **Window prompt (decided 18 Oct 2026):** N = the number of panes with content in W (hosted or placeholder; empty panes never count). With N ≥ 2, SplitKit first shows one prompt "Close window with N panes?" (§7.5); *Cancel* ends the close with nothing closed and nobody asked. With N = 1 no window prompt is shown. If **any declines**, `cancelCloseWindow(W)` and **nothing is closed**. If all accept, `commitCloseWindow(W)` removes W, releases all its contents and removes their records in one transaction. A window with no hosted content commits without asking.
 5. **Last pane of a main window** → `root = nil` (empty state); the app stays alive. **Last content of a detached window** → the window closes (§6.1.6). Closing the last window keeps the app running (zero windows is valid); *File ▸ New Window* brings the main window forward if one exists, otherwise applies `openMainWindow`.
 
 ### 6.4 State ownership
@@ -468,8 +471,8 @@ The engine computes everything purely first; side effects happen only after succ
 
 ### 6.5 Content record lifecycle
 
-- **Records live in `Session.contents` from insert onward.** `insert`/`insertIntoEmptyWindow` with a `NewContent` append `ContentRecord(id, type, stateVersion, state: Data(), availability: .hosted)` in the same transaction. Empty `state` means "not captured yet"; restoring such a record passes `state: nil, stateVersion: nil` to `init`.
-- **Creating the object:** `SplitKitWorkspace` runs `apply` (pure) first. Only on success does it create the object through `ContentRegistry.make(…, url:)`; if creation throws, the result is **discarded** (session and runtime unchanged) and `RegistryError.creationFailed` is thrown. Otherwise the result is committed and the insert snapshot (§8) fills in `state`.
+- **Records live in `Session.contents` from insert onward.** `insert`/`insertIntoEmptyWindow` with a `NewContent` append `ContentRecord(id, type, stateVersion, state: Data(), availability: .hosted)` in the same transaction. Empty `state` means "not captured yet"; restoring such a record passes `url: nil, state: nil, stateVersion: nil` to `init`.
+- **Creating the object:** `SplitKitWorkspace` runs `apply` (pure) first. Only on success does it create the object through `ContentRegistry.make(…, url:)`, which passes the URL into `init(id:url:restoring:stateVersion:)`; the content validates it there and throws `ContentError.unsupportedFile` / `.unreadable` from `init`, so a rejected file never produces an object. If creation throws, the result is **discarded** (session and runtime unchanged) and `RegistryError.creationFailed` is thrown. Otherwise the result is committed and the insert snapshot (§8) fills in `state`.
 - **Move, swap, detach, dock, reorder, resize, focus:** the record is untouched.
 - **commitClose / commitCloseWindow:** the record is removed in the same transaction, and the ID is listed in `released`.
 - **Snapshots** refresh only `state` and `stateVersion` of `.hosted` records. `.unavailable` records are written back verbatim.
@@ -530,7 +533,7 @@ There's no maximize button. An empty pane shows "Add Content" in place of the ti
   - In a detached window with one pane, the menu label reads *Close Pane and Window*.
   - On the last pane of a main window, it reads *Close Pane* and leaves the empty state.
 - **⇧⌘W, *Window ▸ Close Window*:** closes the whole window.
-  - If 2 or more contents ask to confirm, one prompt lists them: "Close window with N panes?" with *Close All* and *Cancel* buttons.
+  - Every pane with content (hosted, or an unavailable placeholder; empty panes never count) counts toward N. With N ≥ 2, one prompt "Close window with N panes?" with *Close All* and *Cancel* buttons comes first; *Cancel* closes nothing. With N = 1 there is no window prompt: the content's own `shouldClose()` (or the placeholder's confirmation) is the only question. Same rule for every window (decided 18 Oct 2026).
   - A detached window prompt also offers *Dock Back Instead*.
 - **⌘W in an empty main window** closes the window. The app stays alive.
 

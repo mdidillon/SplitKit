@@ -24,9 +24,12 @@ final class TestContent: PaneContent {
     private(set) var shouldCloseCalls = 0
     private(set) var willReleaseCalls = 0
     private(set) var makeViewCalls = 0
+    /// What `init` was given as `url`.
+    let receivedURL: URL?
 
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         self.id = id
+        receivedURL = url
     }
 
     var title: String { "Test \(id.raw.uuidString.prefix(4))" }
@@ -63,7 +66,7 @@ final class OtherContent: PaneContent {
 
     let id: ContentID
 
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         self.id = id
     }
 
@@ -84,13 +87,34 @@ final class FailingContent: PaneContent {
     static let minimumSize = CGSize.zero
     static let stateVersion = 1
 
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         throw .other("always fails")
     }
 
     var title: String { "" }
     var toolbarItems: [PaneToolbarItem] { [] }
     func makeView() -> AnyView { AnyView(EmptyView()) }
+    func encodeState() throws -> Data { Data() }
+    func shouldClose() async -> Bool { true }
+    func willRelease() {}
+}
+
+/// A content that validates its URL in `init`: any URL is an unsupported file, no URL is fine.
+@MainActor @Observable
+final class PickyContent: PaneContent {
+    static let type = ContentType(raw: "test.picky")
+    static let displayName = "Picky"
+    static let systemImage = "hand.raised"
+    static let minimumSize = CGSize.zero
+    static let stateVersion = 1
+
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+        if let url { throw .unsupportedFile(url, reason: "not supported") }
+    }
+
+    var title: String { "Picky" }
+    var toolbarItems: [PaneToolbarItem] { [] }
+    func makeView() -> AnyView { AnyView(Color.clear) }
     func encodeState() throws -> Data { Data() }
     func shouldClose() async -> Bool { true }
     func willRelease() {}
@@ -110,11 +134,14 @@ final class CounterContent: PaneContent {
     let id: ContentID
     var count = 0
     var failsEncoding = false
-    /// What `init(restoring:)` was given; `nil` when the content was created new.
+    /// What `init` was given as `stateVersion`; `nil` when the content was created new.
     let restoredStateVersion: Int?
+    /// What `init` was given as `url`.
+    let receivedURL: URL?
 
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         self.id = id
+        receivedURL = url
         restoredStateVersion = stateVersion
         guard let state else { return }
         do {
@@ -147,7 +174,7 @@ final class FlakyRestoreContent: PaneContent {
     static let stateVersion = 1
     static var failing = false
 
-    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
         if Self.failing { throw .other("flaky restore") }
     }
 
