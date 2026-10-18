@@ -20,6 +20,22 @@ enum Fixtures {
     static let dracoBox = "Box/glTF-Draco/Box.gltf"
 }
 
+/// A valid one-triangle asset (36 bytes of positions in a data URI) that `change` edits.
+func triangleAsset(_ change: (inout [String: Any]) -> Void = { _ in }) throws -> Data {
+    var json: [String: Any] = [
+        "asset": ["version": "2.0"],
+        "scene": 0,
+        "scenes": [["nodes": [0]]],
+        "nodes": [["mesh": 0]],
+        "meshes": [["primitives": [["attributes": ["POSITION": 0]]]]],
+        "buffers": [["uri": "data:application/octet-stream;base64," + Data(count: 36).base64EncodedString(), "byteLength": 36]],
+        "bufferViews": [["buffer": 0, "byteOffset": 0, "byteLength": 36]],
+        "accessors": [["bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [0, 0, 0], "max": [0, 0, 0]]],
+    ]
+    change(&json)
+    return try JSONSerialization.data(withJSONObject: json, options: .withoutEscapingSlashes)
+}
+
 /// One machine-greppable line per measurement, summarised in spec §11.2 "P4 corpus results".
 func record(_ fields: KeyValuePairs<String, String>) {
     print("P4B-RESULT " + fields.map { "\($0.key)=\($0.value)" }.joined(separator: " "))

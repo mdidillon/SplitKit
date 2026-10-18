@@ -34,6 +34,17 @@ struct CorpusTests {
         return (model, clock.now - start)
     }
 
+    /// Animations only run on entities in a scene: hosts `entity` in an offscreen RealityRenderer, loops its first
+    /// animation, steps 10 frames and runs `check` while the scene is still alive.
+    private func playFirstAnimation(of entity: Entity, _ check: (AnimationPlaybackController) -> Void) throws {
+        let renderer = try RealityRenderer()
+        renderer.entities.append(entity)
+        let animation = try #require(entity.availableAnimations.first)
+        let controller = entity.playAnimation(animation.repeat())
+        for _ in 0..<10 { try renderer.update(1 / 30) }
+        check(controller)
+    }
+
     // MARK: Required rows
 
     @Test("Loads, bounds within 1% of glTF accessor reference, ≤ 2 s, no missing textures", arguments: requiredModels)
@@ -188,16 +199,80 @@ struct CorpusTests {
                 "total_ms": String(format: "%.1f", r.totalDuration.milliseconds)])
         #expect(r.hasSkins)
         #expect(r.availableAnimationCount == r.gltfAnimationCount)
-        // Animations only run on entities in a scene: host it in an offscreen RealityRenderer, start playback, step.
-        let renderer = try RealityRenderer()
-        renderer.entities.append(loaded.entity)
-        let animation = try #require(loaded.entity.availableAnimations.first)
-        let controller = loaded.entity.playAnimation(animation.repeat())
-        for _ in 0..<10 { try renderer.update(1 / 30) }
-        record(["model": (path as NSString).lastPathComponent, "playing": "\(controller.isPlaying)",
-                "time_s": String(format: "%.3f", controller.time)])
-        #expect(controller.isPlaying)
-        #expect(controller.time > 0)
+        try playFirstAnimation(of: loaded.entity) { controller in
+            record(["model": (path as NSString).lastPathComponent, "playing": "\(controller.isPlaying)",
+                    "time_s": String(format: "%.3f", controller.time)])
+            #expect(controller.isPlaying)
+            #expect(controller.time > 0)
+        }
+    }
+
+    /// GLTFKit2 0.5.15 samples a node's channels every `duration / keyCount` seconds, so a zero-duration channel group
+    /// (one keyframe, the usual "pose" export) traps in `stride(by: 0)`. Node 0 has such a channel in both animations;
+    /// node 1 moves over 1 s in the second.
+    @Test("Zero-duration animation channels: load without crash, skipped and reported as unsupported")
+    func zeroDurationAnimationChannelsAreSkipped() async throws {
+        func floats(_ values: [Float]) -> Data { values.withUnsafeBytes { Data($0) } }
+        let bin = Data(count: 36) + floats([0]) + floats([1, 0, 0]) + floats([0, 1]) + floats([0, 0, 0, 0, 1, 0])
+        let data = try triangleAsset { json in
+            json["scenes"] = [["nodes": [0, 1]]]
+            json["nodes"] = [["mesh": 0, "name": "Posed"], ["mesh": 0, "name": "Moving"]]
+            json["buffers"] = [["uri": "data:application/octet-stream;base64," + bin.base64EncodedString(), "byteLength": bin.count]]
+            json["bufferViews"] = [(0, 36), (36, 4), (40, 12), (52, 8), (60, 24)].map {
+                ["buffer": 0, "byteOffset": $0.0, "byteLength": $0.1]
+            }
+            json["accessors"] = [
+                ["bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [0, 0, 0], "max": [0, 0, 0]],
+                ["bufferView": 1, "componentType": 5126, "count": 1, "type": "SCALAR", "min": [0], "max": [0]],
+                ["bufferView": 2, "componentType": 5126, "count": 1, "type": "VEC3"],
+                ["bufferView": 3, "componentType": 5126, "count": 2, "type": "SCALAR", "min": [0], "max": [1]],
+                ["bufferView": 4, "componentType": 5126, "count": 2, "type": "VEC3"],
+            ]
+            json["animations"] = [
+                ["name": "Pose", "samplers": [["input": 1, "output": 2]],
+                 "channels": [["sampler": 0, "target": ["node": 0, "path": "translation"]]]],
+                ["name": "Move", "samplers": [["input": 3, "output": 4], ["input": 1, "output": 2]],
+                 "channels": [["sampler": 0, "target": ["node": 1, "path": "translation"]],
+                              ["sampler": 1, "target": ["node": 0, "path": "translation"]]]],
+            ]
+        }
+        try await withTemporaryDirectory { dir in
+            let url = dir.appending(path: "pose.gltf")
+            try data.write(to: url)
+            let loaded = try await ModelLoader.load(url: url)
+            let r = loaded.report
+            record(["model": "pose.gltf", "gltf_anims": "\(r.gltfAnimationCount)", "rk_anims": "\(r.availableAnimationCount)",
+                    "skipped_channels": "\(r.skippedAnimationChannels)",
+                    "unsupported": r.unsupportedFeatures.joined(separator: ",")])
+            #expect(r.gltfAnimationCount == 2)
+            #expect(r.availableAnimationCount == 1)
+            #expect(r.skippedAnimationChannels == 2)
+            #expect(r.unsupportedFeatures.contains("animation channels without a duration"))
+
+            try playFirstAnimation(of: loaded.entity) { controller in
+                #expect(controller.isPlaying)
+                #expect(controller.time > 0)
+            }
+        }
+    }
+
+    /// The skeletal path: one joint group without a duration sets the interval of the whole skeletal animation to 0.
+    @Test func zeroDurationJointChannelsAreSkipped() async throws {
+        let path = "CesiumMan/glTF-Binary/CesiumMan.glb"
+        try #require(Fixtures.exists(path))
+        let asset = try GLTFAsset(url: Fixtures.url(path), options: [:])
+        let animation = try #require(asset.animations.first)
+        let joint = try #require(animation.channels.first { $0.target.node?.isJoint == true }?.target.node)
+        let jointChannels = animation.channels.filter { $0.target.node === joint }
+        for channel in jointChannels { channel.sampler.input.minValues = channel.sampler.input.maxValues }
+
+        #expect(AnimationFilter.removeUnsampleableChannels(from: asset) == jointChannels.count)
+        #expect(asset.animations.count == 1)
+        let entity = GLTFRealityKitLoader.convert(scene: try #require(asset.defaultScene), asset: asset)
+        try playFirstAnimation(of: entity) { controller in
+            #expect(controller.isPlaying)
+            #expect(controller.time > 0)
+        }
     }
 
     @Test("Morph targets: load without crash and are reported as unsupported")

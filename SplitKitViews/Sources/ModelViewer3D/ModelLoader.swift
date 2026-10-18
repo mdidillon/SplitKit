@@ -20,6 +20,8 @@ struct LoadReport: Sendable {
     /// Number of glTF animations vs. animations RealityKit exposes on the root entity.
     var gltfAnimationCount: Int
     var availableAnimationCount: Int
+    /// Animation channels dropped before the conversion because GLTFKit2 0.5.15 can't sample them (see `AnimationFilter`).
+    var skippedAnimationChannels: Int
     var hasSkins: Bool
     var hasMorphTargets: Bool
 
@@ -34,6 +36,7 @@ struct LoadReport: Sendable {
     var unsupportedFeatures: [String] {
         var result = extensionsUsed.filter { !Self.convertedExtensions.contains($0) }.sorted()
         if hasMorphTargets { result.append("morph targets") }
+        if skippedAnimationChannels > 0 { result.append("animation channels without a duration") }
         return result
     }
 }
@@ -87,6 +90,8 @@ enum ModelLoader {
         let asset = parsed.asset
         guard let scene = asset.defaultScene ?? asset.scenes.first else { throw .noDefaultScene }
 
+        let gltfAnimationCount = asset.animations.count
+        let skippedChannels = AnimationFilter.removeUnsampleableChannels(from: asset)
         let clock = ContinuousClock()
         let start = clock.now
         let entity = GLTFRealityKitLoader.convert(scene: scene, asset: asset)
@@ -105,8 +110,9 @@ enum ModelLoader {
             convertedTextureSlots: audit.converted,
             extensionsUsed: asset.extensionsUsed,
             extensionsRequired: asset.extensionsRequired,
-            gltfAnimationCount: asset.animations.count,
+            gltfAnimationCount: gltfAnimationCount,
             availableAnimationCount: entity.availableAnimations.count,
+            skippedAnimationChannels: skippedChannels,
             hasSkins: !asset.skins.isEmpty,
             hasMorphTargets: asset.meshes.contains { $0.primitives.contains { !$0.targets.isEmpty } }
         )
@@ -116,6 +122,47 @@ enum ModelLoader {
     @MainActor static func measuredBounds(of entity: Entity) -> AxisAlignedBox {
         let b = entity.visualBounds(relativeTo: nil)
         return AxisAlignedBox(min: b.min, max: b.max)
+    }
+}
+
+/// Removes the animation channels GLTFKit2 0.5.15 can't sample, which would otherwise trap in the conversion.
+/// `GLTFRealityKitLoader.convert(animation:)` groups an animation's channels by target node and samples each group
+/// every `duration / keyCount` seconds, the duration spanning the accessor `min`/`max` of the group's first
+/// translation, rotation and scale channel. A group whose duration isn't positive and finite (a single keyframe, all
+/// keys at one time, no `min`/`max`) makes that interval 0 and `stride(by:)` traps; a joint group also sets the interval
+/// of the whole skeletal animation. Such groups are removed, and so are animations left without channels.
+enum AnimationFilter {
+    private static let transformPaths: Set<String> = [
+        GLTFAnimationPath.translation.rawValue, GLTFAnimationPath.rotation.rawValue, GLTFAnimationPath.scale.rawValue,
+    ]
+
+    /// Returns the number of channels removed from `asset`.
+    static func removeUnsampleableChannels(from asset: GLTFAsset) -> Int {
+        var removed = 0
+        asset.animations = asset.animations.filter { animation in
+            let groups = Dictionary(grouping: animation.channels.filter { $0.target.node != nil }) { $0.target.node!.identifier }
+            let unsampleable = groups.values.filter { !isSampleable($0) }.flatMap { $0 }.map(ObjectIdentifier.init)
+            guard !unsampleable.isEmpty else { return true }
+            let dropped = Set(unsampleable)
+            animation.channels = animation.channels.filter { !dropped.contains(ObjectIdentifier($0)) }
+            removed += dropped.count
+            return !animation.channels.isEmpty
+        }
+        return removed
+    }
+
+    private static func isSampleable(_ group: [GLTFAnimationChannel]) -> Bool {
+        // GLTFKit2 skips a group made of one morph-weights channel (morph targets are reported separately).
+        if group.count == 1, group[0].target.path == GLTFAnimationPath.weights.rawValue { return true }
+        // GLTFKit2 samples the first channel of each transform path.
+        var inputs: [GLTFAccessor] = []
+        for path in transformPaths {
+            if let channel = group.first(where: { $0.target.path == path }) { inputs.append(channel.sampler.input) }
+        }
+        let start = inputs.map { $0.minValues.first?.floatValue ?? .infinity }.min() ?? .infinity
+        let end = inputs.map { $0.maxValues.first?.floatValue ?? -.infinity }.max() ?? -.infinity
+        let duration = end - start
+        return duration > 0 && duration.isFinite
     }
 }
 
