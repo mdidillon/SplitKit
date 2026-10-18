@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 import SplitKitContent
 import SplitKitModel
 
@@ -50,20 +52,49 @@ struct ContentPicker {
         return entries[min(max(index + step, 0), entries.count - 1)].type
     }
 
-    /// Inserts a new `type` at the target. Failures leave the workspace unchanged (spec §6.2).
+    /// Chooses `type`: a file-based type (registered with `accepts`) first asks for a file in an open panel
+    /// filtered to those types, and does nothing when the panel is cancelled. Then it inserts at the target.
     @MainActor func choose(_ type: ContentType, in workspace: SplitKitWorkspace) async {
         guard isEnabled else { return }
-        switch target {
-        case .none:
-            break
-        case .emptyWindow:
-            try? await workspace.addContent(type, url: nil, into: nil)
-        case let .emptyPane(pane):
-            try? await workspace.addContent(type, url: nil, into: pane)
-        case let .besides(pane, edge):
-            try? await workspace.addContent(type, besides: pane, edge: edge)
-        case let .replacing(pane):
-            _ = try? await workspace.replaceContent(pane, with: type, url: nil)
+        var url: URL?
+        if let accepts = workspace.registry.metadata(for: type)?.accepts, !accepts.isEmpty {
+            guard let chosen = workspace.chooseFile(accepts) else { return }
+            url = chosen
+        }
+        await target.insert(type, url: url, in: workspace)
+    }
+
+    /// The open panel behind `SplitKitWorkspace.chooseFile`: one file, filtered to `types`; nil when cancelled.
+    @MainActor static func runOpenPanel(_ types: [UTType]) -> URL? {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = types
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+}
+
+extension ContentPicker.Target {
+    /// Inserts a new `type` content (opened from `url` for a file-based type) at this target: the one add and
+    /// replace path of the picker and of Finder drops. A failure leaves the workspace unchanged (spec §6.2)
+    /// and is shown inline in the target pane or window (`SplitKitWorkspace.creationFailure`).
+    @MainActor func insert(_ type: ContentType, url: URL?, in workspace: SplitKitWorkspace) async {
+        workspace.creationFailure = nil
+        do {
+            switch self {
+            case .none:
+                break
+            case .emptyWindow:
+                try await workspace.addContent(type, url: url, into: nil)
+            case let .emptyPane(pane):
+                try await workspace.addContent(type, url: url, into: pane)
+            case let .besides(pane, edge):
+                try await workspace.addContent(type, url: url, besides: pane, edge: edge)
+            case let .replacing(pane):
+                _ = try await workspace.replaceContent(pane, with: type, url: url)
+            }
+        } catch {
+            workspace.creationFailure = workspace.failure(error, at: self)
         }
     }
 }

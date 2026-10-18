@@ -99,6 +99,30 @@ final class FailingContent: PaneContent {
     func willRelease() {}
 }
 
+/// A file-based content (register it with `accepts: [.png]`): a file named `broken…` is unreadable.
+@MainActor @Observable
+final class FileContent: PaneContent {
+    static let type = ContentType(raw: "test.file")
+    static let displayName = "File"
+    static let systemImage = "doc"
+    static let minimumSize = CGSize.zero
+    static let stateVersion = 1
+
+    let receivedURL: URL?
+
+    init(id: ContentID, url: URL?, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+        if let url, url.lastPathComponent.hasPrefix("broken") { throw .unreadable(url) }
+        receivedURL = url
+    }
+
+    var title: String { receivedURL?.lastPathComponent ?? "File" }
+    var toolbarItems: [PaneToolbarItem] { [] }
+    func makeView() -> AnyView { AnyView(Color.clear) }
+    func encodeState() throws -> Data { Data() }
+    func shouldClose() async -> Bool { true }
+    func willRelease() {}
+}
+
 /// A content that validates its URL in `init`: any URL is an unsupported file, no URL is fine.
 @MainActor @Observable
 final class PickyContent: PaneContent {

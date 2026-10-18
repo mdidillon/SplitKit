@@ -18,6 +18,7 @@ enum SplitKitStyleConstants {
     static let ghostOpacity: Double = 0.6
     static let emptyStateSymbolSize: CGFloat = 28
     static let emptyStateSpacing: CGFloat = 8
+    static let errorMessagePadding: CGFloat = 8
     static let animation: Animation = .smooth
 
     /// §4.3 semantic colours.
@@ -37,6 +38,7 @@ enum SplitKitStyleConstants {
         static let close = "xmark"
         static let emptyPane = "plus.rectangle.on.rectangle"
         static let unknownContent = "questionmark.square.dashed"
+        static let creationError = "exclamationmark.triangle"
     }
 
     /// §8 typography.
@@ -46,6 +48,7 @@ enum SplitKitStyleConstants {
         static let emptyStateSymbol: Font = .system(size: emptyStateSymbolSize)
         static let emptyStateTitle: Font = .title3
         static let emptyStateBody: Font = .callout
+        static let errorMessage: Font = .callout
     }
 
     /// §5 accessibility strings.
@@ -56,5 +59,6 @@ enum SplitKitStyleConstants {
         static let focusToggleLabel = "Focus Pane"
         static let closeLabel = "Close Pane"
         static let overflowLabel = "More"
+        static let dismissErrorLabel = "Dismiss"
     }
 }

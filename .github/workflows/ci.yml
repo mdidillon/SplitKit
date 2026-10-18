@@ -58,6 +58,42 @@ jobs:
         run: swift test
         working-directory: SplitKitViews
 
+      - name: Clean consumer test per product (R-PROD)
+        run: |
+          # Usage: consumer_test <product> <fixture under SplitKitViews/Tests/Fixtures> <main.swift source>.
+          # A fresh package depends on SplitKitViews by path and on ONLY that product; its main.swift must print OK.
+          consumer_test() {
+            product="$1"; fixture="$2"; source="$3"
+            dir="$RUNNER_TEMP/consumer-$product"
+            rm -rf "$dir"
+            mkdir -p "$dir/Sources/consumer"
+            printf '%s\n' \
+              '// swift-tools-version: 6.2' \
+              'import PackageDescription' \
+              'let package = Package(' \
+              '    name: "consumer",' \
+              '    platforms: [.macOS(.v26)],' \
+              "    dependencies: [.package(path: \"$GITHUB_WORKSPACE/SplitKitViews\")]," \
+              '    targets: [.executableTarget(name: "consumer", dependencies: [' \
+              "        .product(name: \"$product\", package: \"SplitKitViews\")])]," \
+              '    swiftLanguageModes: [.v6]' \
+              ')' > "$dir/Package.swift"
+            printf '%s\n' "$source" > "$dir/Sources/consumer/main.swift"
+            out=$(swift run --package-path "$dir" consumer "$GITHUB_WORKSPACE/SplitKitViews/Tests/Fixtures/$fixture")
+            echo "$product consumer: $out"
+            test "$out" = OK
+            echo "- consumer test $product: OK" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          }
+
+          consumer_test ImageViewer Images/pixel.png 'import Foundation
+          import ImageViewer
+          import SplitKitModel
+
+          let url = URL(fileURLWithPath: CommandLine.arguments[1])
+          let viewer = try ImageViewerContent(id: ContentID(raw: UUID()), url: url, restoring: nil, stateVersion: nil)
+          _ = viewer.makeView()
+          print("OK")'
+
       - name: xcodebuild (SplitKitTestApp)
         run: >
           xcodebuild -project SplitKitTestApp/SplitKitTestApp.xcodeproj

@@ -20,6 +20,7 @@ struct PaneCardView: View {
             contentBody
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .draggedSourceOpacity(workspace.draggedPane == pane)
+                .creationFailureBanner(workspace, at: .pane(pane))
         }
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: tokens.metrics.cornerRadius, style: .continuous))

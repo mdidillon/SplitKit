@@ -24,7 +24,7 @@ open --stdout "$(tty)" "$(xcodebuild -project SplitKitTestApp/SplitKitTestApp.xc
 
 At launch one window opens (the main window): **No Content** with an **Add Content** button, centred on the screen, about 1200 × 800 pt.
 
-**Contents:** *Colour* (a pane filled with one system colour, picked at random; the header title is its name; toolbar: *Next Colour* and the *Choose Colour* ▸ menu) and *Counter* (a number; toolbar **−** and **+**, also ⌘- and ⌘= while the pane is active; closing it with a count other than 0 asks "Close the counter at N?"). The Add Content type list shows them in this order: Colour, Counter.
+**Contents:** *Colour* (a pane filled with one system colour, picked at random; the header title is its name; toolbar: *Next Colour* and the *Choose Colour* ▸ menu) and *Counter* (a number; toolbar **−** and **+**, also ⌘- and ⌘= while the pane is active; closing it with a count other than 0 asks "Close the counter at N?"). *Image* (P4a, see the P4 section) is registered third. The Add Content type list shows them in this order: Colour, Counter, Image.
 
 **Keyboard reference** (spec §7.5): ⇧⌘N Add Content… (the type list opens; ↑/↓ choose, Return adds, Esc cancels), ⌘D Split Right, ⇧⌘D Split Down, ⌥⌘← → ↑ ↓ move the active pane, ⌃⌥⌘← → ↑ ↓ move the pane to that edge, ⇧⌘↩ Focus Pane, ⇧⌥⌘D Detach Pane, ⌘W Close Pane, ⇧⌘W Close Window, ⌘N New Window. (⇧⌘↩ and ⇧⌥⌘D replace ⌃⌘F and ⌥⌘D, which collide with Enter Full Screen and the Dock-hiding toggle; spec §7.5.)
 
@@ -84,6 +84,18 @@ open --stdout "$(tty)" "$(xcodebuild -project SplitKitTestApp/SplitKitTestApp.xc
 
 The Terminal prints `SplitKitHostSample restore: RestoreReport(source: persistenceDisabled, …)` at launch.
 
+## P4 ImageViewer (spec §10, §11 P4; started in P4a, ModelViewer3D follows in P4b)
+
+The test app and the host sample register *Image* as a third type (after Counter). Use any PNG or JPEG, plus a corrupt one: `printf 'not a png' > ~/Desktop/broken.png` (delete it afterwards). Run in the test app with `-SplitKitPersistenceDisabled YES` unless the check says otherwise.
+
+| # | Check | Expected | OK |
+|---|---|---|---|
+| 35 | **Standalone and picker file panel.** Empty window ▸ Add Content ▸ Image. Cancel the panel once. Choose a PNG. Resize the window. | The type list closes and an open panel shows only image files. Cancel adds nothing. The image fills the pane aspect-fit (no zoom, pan or rotate, no toolbar items) and the title is the file name. Resizing keeps the aspect ratio. | |
+| 36 | **Docked and detached.** Add a Colour next to it (⌘D, ⇧⌘N). Drag the Image header onto the Colour's edge and centre; *Detach* it (⇧⌥⌘D); *Dock Back*. Add a second Image through the pane menu ▸ Replace Content… ▸ Image on the Colour. | The image is the same after every move (same file, same title); Replace Content… also shows the file panel and the Colour is replaced by the image. | |
+| 37 | **Finder drop.** Drag a PNG from Finder onto: the empty window; an empty pane (⌘D first); the centre of an occupied pane; an edge of a pane; a `.txt` file onto a pane. Also drag over a pane and leave the window without dropping. | Empty window and empty pane: the image fills it. Centre of an occupied pane: it replaces that pane's content (after the usual close question). Edge: the pane splits and the image takes the new half. The accent drop overlay shows the same zones as a header drag; the `.txt` shows no overlay and nothing happens. Leaving the window clears the overlay. | |
+| 38 | **Corrupt file.** Pick `broken.png` in the file panel, then drop it on an occupied pane's centre and on a pane's edge. | Each time the pane (or the empty window) shows a dismissible message “broken.png” couldn't be read. (warning symbol, ✕ to dismiss) at its bottom; the layout is exactly as before (no empty pane left after the edge drop); the next add or drop clears the message. | |
+| 39 | **Relaunch (persistence on).** Open two images in two panes, quit with ⌘Q, relaunch. Quit again, move one image file elsewhere, relaunch. | Both images come back in their panes. With a moved file that pane shows the placeholder “Image couldn't be restored” with Restore and Close; the other pane is intact. | |
+
 ## Design.md §11 [check] values (check 13)
 
 | # | Value | OK / change to |
@@ -102,6 +114,7 @@ The Terminal prints `SplitKitHostSample restore: RestoreReport(source: persisten
 | 12 | Header controls: borderless buttons with interactive glass capsules | |
 | 13 | Empty window title "No Content" | |
 | 14 | Header title minimum width 64 pt (narrow a pane until toolbar items go to ⋯) | |
+| 15 | Creation error message: `exclamationmark.triangle`, `.callout` text, `.thinMaterial` box (corner radius `metrics.cornerRadius`) at the pane's bottom with 8 pt padding (check 38) | |
 
 ## Gaps known before the run
 

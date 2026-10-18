@@ -22,7 +22,7 @@ struct SplitKitTestApp: App {
     }
 }
 
-/// Creates the workspace (colour and counter contents, `.splitKit` windows, the session file at its
+/// Creates the workspace (colour, counter and image contents, `.splitKit` windows, the session file at its
 /// default location), restores it at launch, saves it at quit (at most 2 s, spec §8) and keeps the app
 /// running without windows (spec §6.3.5).
 ///
@@ -42,8 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try registry.register(ColorContent.self)
             try registry.register(CounterContent.self)
+            try ImageViewerContent.register(in: registry)
         } catch {
-            preconditionFailure("registering the dummy contents failed: \(error)")
+            preconditionFailure("registering the contents failed: \(error)")
         }
         let disabled = UserDefaults.standard.bool(forKey: Self.persistenceDisabledKey)
         var configuration = SplitKitConfiguration(persistence: disabled ? .disabled : .file(.applicationSupportDefault))

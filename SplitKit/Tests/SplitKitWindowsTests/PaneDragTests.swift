@@ -96,6 +96,20 @@ private let windowFrame = CGRect(x: 100, y: 100, width: 400, height: 300)
         var hovers: [DockTarget?] = []
         var exits = 0
         var performed: [DockTarget] = []
+        var accepts = true
+        var fileHovers: [(url: URL, point: CGPoint)] = []
+        var fileExits = 0
+        var filesPerformed: [URL] = []
+
+        func fileDropHover(_ url: URL, in window: WindowID, at point: CGPoint) -> Bool {
+            fileHovers.append((url, point))
+            return accepts
+        }
+        func fileDropExited(window: WindowID) { fileExits += 1 }
+        func fileDropPerform(_ url: URL, in window: WindowID, at point: CGPoint) -> Bool {
+            filesPerformed.append(url)
+            return accepts
+        }
 
         func dockTarget(in window: WindowID, at point: CGPoint, for payload: PaneDragPayload) -> DockTarget? {
             points.append(point)
@@ -115,9 +129,9 @@ private let windowFrame = CGRect(x: 100, y: 100, width: 400, height: 300)
         return view
     }
 
-    @Test func itRegistersForThePrivatePaneTypeOnly() {
+    @Test func itRegistersForThePrivatePaneTypeAndFileURLs() {
         let delegate = Delegate()
-        #expect(container(delegate).registeredDraggedTypes == [.splitKitPane])
+        #expect(container(delegate).registeredDraggedTypes == [.splitKitPane, .fileURL])
     }
 
     @Test func aValidTargetAcceptsAMoveAndReportsTheHover() {
@@ -163,7 +177,7 @@ private let windowFrame = CGRect(x: 100, y: 100, width: 400, height: 300)
         let overlay = DockDropContainerView(overlayFor: WindowID(raw: UUID()))
         overlay.delegate = delegate
         overlay.frame = CGRect(x: 0, y: 0, width: 200, height: 100)
-        #expect(overlay.isOverlay && overlay.registeredDraggedTypes == [.splitKitPane] && overlay.isFlipped)
+        #expect(overlay.isOverlay && overlay.registeredDraggedTypes == [.splitKitPane, .fileURL] && overlay.isFlipped)
         let info = FakeDraggingInfo(payload: payload, location: CGPoint(x: 30, y: 20))
         #expect(overlay.draggingEntered(info) == .move && overlay.performDragOperation(info))
         #expect(delegate.performed == [delegate.target!])
@@ -178,10 +192,12 @@ private let windowFrame = CGRect(x: 100, y: 100, width: 400, height: 300)
         (.leftMouseDown, true, false), (.mouseMoved, true, false), (.scrollWheel, true, false),
         (.leftMouseDragged, false, false), (nil, false, false),
     ] as [(NSEvent.EventType?, Bool, Bool)])
-    func aPaneDragIsInFlightOnlyForADragEventWithAPanePayload(event: NSEvent.EventType?, hasPayload: Bool, expected: Bool) {
-        let types: [NSPasteboard.PasteboardType] = hasPayload ? [.string, .splitKitPane] : [.string]
-        #expect(DockDropContainerView.isPaneDragInFlight(event: event, pasteboardTypes: types) == expected)
-        #expect(!DockDropContainerView.isPaneDragInFlight(event: .leftMouseDragged, pasteboardTypes: nil))
+    func aDropIsInFlightOnlyForADragEventWithAPaneOrFilePayload(event: NSEvent.EventType?, hasPayload: Bool, expected: Bool) {
+        for payload in [NSPasteboard.PasteboardType.splitKitPane, .fileURL] {
+            let types: [NSPasteboard.PasteboardType] = hasPayload ? [.string, payload] : [.string]
+            #expect(DockDropContainerView.isDropInFlight(event: event, pasteboardTypes: types) == expected)
+        }
+        #expect(!DockDropContainerView.isDropInFlight(event: .leftMouseDragged, pasteboardTypes: nil))
     }
 
     @Test func theDestinationOfAWindowIsItsContentViewOrTheOverlayInsideHostContent() {

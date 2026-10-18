@@ -50,6 +50,8 @@ targets:
         product: SplitKitContent
       - package: SplitKit
         product: SplitKitModel
+      - package: SplitKitViews
+        product: ImageViewer
 schemes:
   SplitKitTestApp:
     build:

@@ -24,7 +24,7 @@ Docs/              Specification and design references.
 
 ## First content views
 
-- **ImageViewer**: display only.
+- **ImageViewer**: display only, aspect-fit. Opens from the content picker's file panel or a file dropped from Finder (`UTType.image`). Register it with `try ImageViewerContent.register(in: registry)`; depends only on `SplitKitContent`. A fresh package that depends on this one product builds and runs (CI step "Clean consumer test per product").
 - **ModelViewer3D**: glTF and GLB via GLTFKit2 and RealityKit, with standard rotate, pan and zoom.
 
 Deferred: terminal, code editor, browser, file browser, GitHub view.

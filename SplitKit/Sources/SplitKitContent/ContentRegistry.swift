@@ -17,6 +17,8 @@ public enum RegistryError: Error, Sendable {
         package let systemImage: String
         package let minimumSize: CGSize
         package let stateVersion: Int
+        /// The file types the content opens; empty for a type that is not file-based (picker and Finder drops, §7.1, §9).
+        package let accepts: [UTType]
     }
 
     private struct Entry {
@@ -40,7 +42,8 @@ public enum RegistryError: Error, Sendable {
                 displayName: C.displayName,
                 systemImage: C.systemImage,
                 minimumSize: C.minimumSize,
-                stateVersion: C.stateVersion
+                stateVersion: C.stateVersion,
+                accepts: accepts
             ),
             accepts: accepts,
             create: { (id, url, state, stateVersion) throws(ContentError) -> any PaneContent in

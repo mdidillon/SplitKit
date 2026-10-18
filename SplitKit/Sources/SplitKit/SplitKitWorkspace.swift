@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 import SplitKitContent
 import SplitKitModel
 import SplitKitWindows
@@ -26,6 +27,12 @@ public final class SplitKitWorkspace {
     private(set) var addContentRequest: WindowID?
     /// The pane the open picker replaces the content of; nil when it adds (§6.3.6). Set only with `addContentRequest`.
     private(set) var replaceContentRequest: PaneID?
+    /// The newest add or replace that failed in the picker or a file drop, shown inline in its pane or window
+    /// until dismissed; runtime-only, never persisted.
+    var creationFailure: CreationFailure?
+    /// Asks the user for a file of one of the given types (the picker's file panel); nil when cancelled.
+    /// Tests inject their own.
+    @ObservationIgnored var chooseFile: @MainActor ([UTType]) -> URL? = ContentPicker.runOpenPanel
     /// The displays a detached window is placed on (§9); tests inject their own.
     @ObservationIgnored var displays: @MainActor () -> [DisplaySnapshot] = DetachPlacement.currentDisplays
 
@@ -195,8 +202,9 @@ public final class SplitKitWorkspace {
     }
 
     /// Adds a new `type` content in a new pane next to `pane`: `split` (an empty pane at `edge`), then
-    /// `addContent` into it. Composition of the two existing commands; if the add fails the empty pane stays.
-    func addContent(_ type: ContentType, besides pane: PaneID, edge: DropEdge) async throws(RegistryError) {
+    /// `addContent` into it. Composition of the two existing commands; if the add fails (e.g. `url` is
+    /// rejected by the content) the new empty pane is closed again, so the layout is as it was.
+    func addContent(_ type: ContentType, url: URL? = nil, besides pane: PaneID, edge: DropEdge) async throws(RegistryError) {
         let before = Set(allLeaves.map(\.pane))
         do {
             try await perform(.split(pane, edge: edge))
@@ -206,7 +214,12 @@ public final class SplitKitWorkspace {
         guard let new = allLeaves.first(where: { !before.contains($0.pane) })?.pane else {
             throw .creationFailed(type, .other("layout: no new pane"))
         }
-        try await addContent(type, url: nil, into: new)
+        do {
+            try await addContent(type, url: url, into: new)
+        } catch {
+            try? await perform(.closePane(new))
+            throw error
+        }
     }
 
     // MARK: Add Content… and focus mode (§7.3, §7.5)
@@ -266,7 +279,7 @@ public final class SplitKitWorkspace {
 
     // MARK: Lookups
 
-    private var allLeaves: [(pane: PaneID, content: ContentID?)] {
+    var allLeaves: [(pane: PaneID, content: ContentID?)] {
         session.windows.flatMap { $0.root?.leaves ?? [] }
     }
 

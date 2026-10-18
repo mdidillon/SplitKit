@@ -49,6 +49,7 @@ Values every style needs but that are not public tokens. They live in **one inte
 | Dragged-source opacity | 0.5 **[check]** | Header and content of the pane being dragged |
 | Empty-state symbol size | 28 pt **[check]** | Symbol in the empty pane and empty window |
 | Empty-state spacing | 8 pt **[check]** | Vertical spacing in empty and placeholder views |
+| Error message padding | 8 pt **[check]** | Inset of the creation-error message from the pane edge, and inside it between symbol, text and dismiss button (§7) |
 | Animations | `.smooth` (system default) | State changes (active, drop target, pending close); no custom curves or durations |
 | Header control labels | "Focus Pane", "Close Pane" **[check]** | VoiceOver label and tooltip of the focus toggle and close button (§5); the pending-close value is "Closing" |
 
@@ -139,6 +140,7 @@ The element order and behaviour are in spec §7.1 and the layout and overflow ru
 | **Empty pane** | Header shows "Add Content" as the title (spec §7.1); body shows `plus.rectangle.on.rectangle` at the empty-state size, `.secondary`, a title and the Add Content button (§4) | same with §4.2 button |
 | **Empty window** (no panes) | Same composition as the empty pane, centred in the window; title "No Content" **[check]** | same |
 | **Unavailable placeholder** | The type's symbol (or `questionmark.square.dashed` when unknown), the message from spec §8 in `.secondary`, **Restore** (`.glass`) and **Close** buttons | same with `.bordered` buttons |
+| **Creation error** (a file that can't be opened from the picker's file panel or a Finder drop, spec §11.2 P4a) | Over the bottom of the pane body or of the empty window, layout unchanged: `exclamationmark.triangle` in `.secondary`, the message in `.callout` `.primary` (leading-aligned, wraps), and a borderless `xmark` button labelled "Dismiss"; the box is `.thinMaterial` with `metrics.cornerRadius` **[check]** and the error message padding (§3) around and inside it. Appears and disappears with `.smooth` opacity | same (`.plain` has corner radius 0) |
 | **Content picker** | Add Content (empty pane, empty window) opens a popover on the empty state with one borderless button per registered type, `Label(displayName, systemImage)`, in registry order, default popover padding; the pane menu lists the same buttons | same |
 | **Close confirmation** | System alert (§4.3): the window prompt "Close window with N panes?" with **Close All** and **Cancel**, or "Close ‹Type›?" with **Close** and **Cancel** for an unavailable placeholder; shown on the window of the pane. While it is open the pane (or every pane of the window) is in the pending-close state above | same |
 | **Focus mode** | The focused card fills the window; no extra decoration besides the toggled focus symbol | same |
@@ -155,6 +157,7 @@ System font only (SF Pro via SwiftUI text styles); no custom fonts, no fixed poi
 | Toolbar item labels, overflow menu | `.callout` |
 | Empty state / placeholder title | `.title3` (15 pt) **[check]** |
 | Empty state / placeholder body and hints | `.callout`, `.secondary` |
+| Creation-error message (§7) | `.callout` |
 | Numbers that change (e.g. the counter dummy) | `.monospacedDigit()` |
 
 Title truncation follows spec §7.4.
@@ -193,3 +196,4 @@ Checked on the Phase 2 example screen and the first chrome build, in light and d
 12. `.glass` header controls: borderless buttons with token-driven interactive `glassEffect` capsules in one `GlassEffectContainer`
 13. Empty window title copy "No Content"
 14. Header title minimum width 64 pt
+15. Creation-error message look and 8 pt padding (§3, §7; P4a)

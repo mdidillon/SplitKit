@@ -12,6 +12,14 @@ import SplitKitModel
     func dockExited(window: WindowID)
     /// Runs the drop. False leaves everything unchanged (AppKit then ends the drag as cancelled).
     func dockPerform(_ payload: PaneDragPayload, onto target: DockTarget) -> Bool
+
+    /// A file from outside the app (Finder) is over `window` at `point`; true when a drop there would open it
+    /// (a registered type matches and the zone under the cursor can take it). The delegate shows the zone.
+    func fileDropHover(_ url: URL, in window: WindowID, at point: CGPoint) -> Bool
+    /// The file drag left `window`, or ended over it.
+    func fileDropExited(window: WindowID)
+    /// Opens the file at the zone under `point`. False leaves everything unchanged.
+    func fileDropPerform(_ url: URL, in window: WindowID, at point: CGPoint) -> Bool
 }
 
 /// The content view of every window the coordinator shows and the drop destination of its panes (§9, §11.1).
@@ -32,7 +40,7 @@ import SplitKitModel
         content.frame = bounds
         content.autoresizingMask = [.width, .height]
         addSubview(content)
-        registerForDraggedTypes([.splitKitPane])
+        registerForDraggedTypes(Self.draggedTypes)
     }
 
     /// The drop destination of a window the host owns (§9 `.host`): a transparent view laid over the host's
@@ -42,7 +50,16 @@ import SplitKitModel
         self.windowID = windowID
         isOverlay = true
         super.init(frame: .zero)
-        registerForDraggedTypes([.splitKitPane])
+        registerForDraggedTypes(Self.draggedTypes)
+    }
+
+    /// What a window accepts: a pane of this app, or a file from outside it (Finder).
+    package static let draggedTypes: [NSPasteboard.PasteboardType] = [.splitKitPane, .fileURL]
+
+    /// The first file URL on `pasteboard`, if any.
+    package static func fileURL(in pasteboard: NSPasteboard) -> URL? {
+        let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]
+        return urls?.first
     }
 
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
@@ -50,15 +67,16 @@ import SplitKitModel
     /// Top-left origin, like SwiftUI, so a window point needs no flipping.
     override package var isFlipped: Bool { true }
 
-    /// Whether a pane drag is in flight: the dragging pasteboard holds a pane payload and the event being
-    /// handled is a drag (the pasteboard keeps its payload after the drop, so it alone is not enough).
-    package static func isPaneDragInFlight(event: NSEvent.EventType?, pasteboardTypes: [NSPasteboard.PasteboardType]?) -> Bool {
-        (event == .leftMouseDragged || event == nil) && pasteboardTypes?.contains(.splitKitPane) == true
+    /// Whether a drop this view takes is in flight: the dragging pasteboard holds a pane payload or a file URL
+    /// and the event being handled is a drag (the pasteboard keeps its payload after the drop, so it alone is
+    /// not enough).
+    package static func isDropInFlight(event: NSEvent.EventType?, pasteboardTypes: [NSPasteboard.PasteboardType]?) -> Bool {
+        (event == .leftMouseDragged || event == nil) && pasteboardTypes?.contains(where: draggedTypes.contains) == true
     }
 
     override package func hitTest(_ point: NSPoint) -> NSView? {
         guard isOverlay else { return super.hitTest(point) }
-        let drag = Self.isPaneDragInFlight(event: NSApp.currentEvent?.type, pasteboardTypes: NSPasteboard(name: .drag).types)
+        let drag = Self.isDropInFlight(event: NSApp?.currentEvent?.type, pasteboardTypes: NSPasteboard(name: .drag).types)
         return drag ? super.hitTest(point) : nil
     }
 
@@ -86,19 +104,36 @@ import SplitKitModel
     // MARK: NSDraggingDestination
 
     private func evaluate(_ info: any NSDraggingInfo) -> NSDragOperation {
-        guard let delegate, let payload = PaneDragPayload(pasteboard: info.draggingPasteboard) else { return [] }
+        guard let delegate else { return [] }
         let point = convert(info.draggingLocation, from: nil)
-        let target = delegate.dockTarget(in: windowID, at: point, for: payload)
-        delegate.dockHover(target, in: windowID, for: payload)
-        return target == nil ? [] : .move
+        if let payload = PaneDragPayload(pasteboard: info.draggingPasteboard) {
+            let target = delegate.dockTarget(in: windowID, at: point, for: payload)
+            delegate.dockHover(target, in: windowID, for: payload)
+            return target == nil ? [] : .move
+        }
+        if let url = Self.fileURL(in: info.draggingPasteboard) {
+            return delegate.fileDropHover(url, in: windowID, at: point) ? .copy : []
+        }
+        return []
     }
 
     override package func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation { evaluate(sender) }
     override package func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation { evaluate(sender) }
-    override package func draggingExited(_ sender: (any NSDraggingInfo)?) { delegate?.dockExited(window: windowID) }
-    override package func draggingEnded(_ sender: any NSDraggingInfo) { delegate?.dockExited(window: windowID) }
+    override package func draggingExited(_ sender: (any NSDraggingInfo)?) { exited() }
+    override package func draggingEnded(_ sender: any NSDraggingInfo) { exited() }
+
+    private func exited() {
+        delegate?.dockExited(window: windowID)
+        delegate?.fileDropExited(window: windowID)
+    }
 
     override package func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        if PaneDragPayload(pasteboard: sender.draggingPasteboard) == nil, let delegate,
+           let url = Self.fileURL(in: sender.draggingPasteboard) {
+            let point = convert(sender.draggingLocation, from: nil)
+            delegate.fileDropExited(window: windowID)
+            return delegate.fileDropPerform(url, in: windowID, at: point)
+        }
         guard let delegate, let payload = PaneDragPayload(pasteboard: sender.draggingPasteboard),
               let target = delegate.dockTarget(in: windowID, at: convert(sender.draggingLocation, from: nil), for: payload)
         else { return false }

@@ -26,6 +26,7 @@ public struct SplitKitView: View {
                     SplitLayoutView(workspace: workspace, window: layout, root: root)
                 } else {
                     EmptyContentView(workspace: workspace, target: .emptyWindow)
+                        .creationFailureBanner(workspace, at: .window(window))
                 }
             }
         }
@@ -110,6 +111,17 @@ enum ChromeText {
 
     /// The placeholder's message when the type is registered but `init(restoring:)` threw (spec §8).
     static func restoreFailed(_ typeName: String) -> String { "\(typeName) couldn't be restored" }
+
+    /// The inline message of an add or replace that failed (spec §6.5), by the `ContentError` the content threw.
+    static func creationFailed(_ error: RegistryError) -> String {
+        switch error {
+        case let .creationFailed(_, .unreadable(url)): "“\(url.lastPathComponent)” couldn't be read."
+        case let .creationFailed(_, .unsupportedFile(url, reason)): "“\(url.lastPathComponent)” can't be opened: \(reason)."
+        case let .creationFailed(_, .stateIncompatible(version)): "The saved state (version \(version)) isn't compatible."
+        case let .creationFailed(_, .other(message)): message
+        case .unknownType, .duplicateType: "This content type isn't available."
+        }
+    }
 
     /// The window close prompt (spec §7.5).
     static func closeWindowTitle(panes: Int) -> String { "Close window with \(panes) panes?" }

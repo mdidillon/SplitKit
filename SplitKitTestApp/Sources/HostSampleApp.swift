@@ -2,10 +2,11 @@ import AppKit
 import SwiftUI
 import SplitKit
 import SplitKitContent
+import ImageViewer
 
 /// The host-mode sample (spec §9, §11 P3): the host owns its main window (a SwiftUI `Window`) and embeds
 /// `SplitKitView`; SplitKit only creates the detached windows. Persistence is `.disabled`, so every launch
-/// starts from the default layout. Colour and Counter are registered, `SplitKitCommands` is installed.
+/// starts from the default layout. Colour, Counter and Image are registered, `SplitKitCommands` is installed.
 @main
 struct SplitKitHostSample: App {
     @State private var workspace = HostSampleApp.makeWorkspace()
@@ -42,6 +43,7 @@ enum HostSampleApp {
         do {
             try registry.register(ColorContent.self)
             try registry.register(CounterContent.self)
+            try ImageViewerContent.register(in: registry)
             let workspace = try SplitKitWorkspace(
                 registry: registry,
                 configuration: SplitKitConfiguration(windowManagement: .host(makeDetachedWindow: nil), persistence: .disabled))

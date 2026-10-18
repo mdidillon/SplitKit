@@ -116,19 +116,19 @@ struct PaneCells: Equatable {
     // MARK: Destination
 
     func dockTarget(in window: WindowID, at point: CGPoint, for payload: PaneDragPayload) -> DockTarget? {
-        guard let workspace, active?.payload.drag == payload.drag, let layout = workspace.windowLayout(window) else { return nil }
-        let candidate: DockTarget
-        if layout.root == nil {
-            guard layout.kind == .main else { return nil }
-            candidate = .emptyWindow(window)
-        } else {
-            guard let cells = workspace.paneCells[window], let cell = cells.cells.first(where: { $0.frame.contains(point) }),
-                  cell.pane != payload.pane else { return nil }
-            let zone = SplitGeometry.dropZone(at: point, in: cells.card(of: cell),
-                                              centreFraction: SplitKitStyleConstants.dropZoneCentreFraction)
-            candidate = .pane(cell.pane, zone)
-        }
+        guard active?.payload.drag == payload.drag, let candidate = zone(in: window, at: point, excluding: payload.pane) else { return nil }
         return isValid(candidate, in: window, for: payload) ? candidate : nil
+    }
+
+    /// The drop zone under `point` in `window` (the empty window, or a pane's edge half or centre), apart from
+    /// `excluded`'s own pane: the geometry both pane drags and file drops are hit-tested against.
+    private func zone(in window: WindowID, at point: CGPoint, excluding excluded: PaneID?) -> DockTarget? {
+        guard let workspace, let layout = workspace.windowLayout(window) else { return nil }
+        if layout.root == nil { return layout.kind == .main ? .emptyWindow(window) : nil }
+        guard let cells = workspace.paneCells[window], let cell = cells.cells.first(where: { $0.frame.contains(point) }),
+              cell.pane != excluded else { return nil }
+        return .pane(cell.pane, SplitGeometry.dropZone(at: point, in: cells.card(of: cell),
+                                                       centreFraction: SplitKitStyleConstants.dropZoneCentreFraction))
     }
 
     /// Whether the drop would succeed: the transaction computed on a copy, nothing committed (§6.2).
@@ -174,7 +174,53 @@ struct PaneCells: Equatable {
     }
 }
 
+// MARK: File drops (Finder)
+
+extension PaneDragController {
+    /// What a drop of `url` at `point` would do, or nil: a registered type must match the file, no pane
+    /// drag may be running, and the zone must not be closing.
+    private func fileDrop(of url: URL, in window: WindowID, at point: CGPoint) -> (type: ContentType, target: ContentPicker.Target, zone: DockTarget)? {
+        guard let workspace, active == nil, let type = workspace.registry.type(for: url),
+              let zone = zone(in: window, at: point, excluding: nil) else { return nil }
+        let target = workspace.insertTarget(for: zone)
+        guard workspace.contentPicker(for: target).isEnabled else { return nil }
+        return (type, target, zone)
+    }
+
+    func fileDropHover(_ url: URL, in window: WindowID, at point: CGPoint) -> Bool {
+        let drop = fileDrop(of: url, in: window, at: point)
+        if workspace?.dockTarget != drop?.zone { workspace?.dockTarget = drop?.zone }
+        return drop != nil
+    }
+
+    func fileDropExited(window: WindowID) {
+        if active == nil { workspace?.dockTarget = nil }
+    }
+
+    /// Opens `url` at the zone under `point` through the picker's insert path (`ContentPicker.Target.insert`);
+    /// a failure shows inline in the target. The insert runs after the drop returns (a replace may ask to close).
+    func fileDropPerform(_ url: URL, in window: WindowID, at point: CGPoint) -> Bool {
+        guard let workspace, let drop = fileDrop(of: url, in: window, at: point) else { return false }
+        workspace.dockTarget = nil
+        Task { await drop.target.insert(drop.type, url: url, in: workspace) }
+        return true
+    }
+}
+
 extension SplitKitWorkspace {
+    /// Where a file dropped on `zone` goes (spec §9): an edge zone splits (a new pane beside), the centre of
+    /// an empty pane or window fills it, the centre of an occupied pane replaces its content.
+    func insertTarget(for zone: DockTarget) -> ContentPicker.Target {
+        switch zone {
+        case .emptyWindow:
+            return .emptyWindow
+        case let .pane(pane, edge):
+            guard edge == .center else { return .besides(pane, edge) }
+            let occupied = allLeaves.first { $0.pane == pane }?.content != nil
+            return occupied ? .replacing(pane) : .emptyPane(pane)
+        }
+    }
+
     /// Makes `pane` the active pane of its window (a click on its header, §7.3).
     func activate(_ pane: PaneID) {
         guard let window = try? window(containing: pane), windowLayout(window)?.activePane != pane else { return }
