@@ -87,7 +87,10 @@ struct PaneCardView: View {
 
 /// The view of one live content object, keyed by its `ContentID` so a swap or move re-hosts it instead
 /// of reusing another content's view state. Registers with the `ContentStore` while on screen; a second
-/// window hosting the same content is a programmer error (§6.4, §12).
+/// window hosting the same content is a programmer error (§6.4, §12). Opening a window renders it at once,
+/// so after a detach, Move to Window or Dock Back the destination can render before the source window has
+/// dropped the view: the destination shows nothing until the source lets go (§6.2: re-host after the windows
+/// are created).
 struct HostedContentView: View {
     let object: any PaneContent
     let content: ContentID
@@ -95,12 +98,14 @@ struct HostedContentView: View {
     let store: ContentStore
 
     var body: some View {
-        object.makeView()
-            .id(content)
-            .onAppear {
-                let hosted = store.beginHosting(content, in: window)
-                assert(hosted, "content \(content) is already hosted in another window")
-            }
-            .onDisappear { store.endHosting(content, in: window) }
+        if store.canHost(content, in: window) {
+            object.makeView()
+                .id(content)
+                .onAppear {
+                    let hosted = store.beginHosting(content, in: window)
+                    assert(hosted, "content \(content) is already hosted in another window")
+                }
+                .onDisappear { store.endHosting(content, in: window) }
+        }
     }
 }

@@ -9,8 +9,9 @@ import SplitKitModel
 final class ContentStore {
     private(set) var objects: [ContentID: any PaneContent] = [:]
     /// Live `makeView()` hosts per content and window. Counted, so a pane view that appears before the
-    /// old one disappears (same window) is no double host.
-    @ObservationIgnored private var hosts: [ContentID: [WindowID: Int]] = [:]
+    /// old one disappears (same window) is no double host. Observed: a pane waiting in `canHost` shows the
+    /// view once the other window lets go.
+    private var hosts: [ContentID: [WindowID: Int]] = [:]
 
     subscript(id: ContentID) -> (any PaneContent)? { objects[id] }
 
@@ -31,8 +32,7 @@ final class ContentStore {
     /// window already hosts it: one `ContentID` is never hosted in two windows at once (§6.4).
     @discardableResult
     func beginHosting(_ id: ContentID, in window: WindowID) -> Bool {
-        let windows = hosts[id, default: [:]]
-        guard windows.keys.allSatisfy({ $0 == window }) else { return false }
+        guard canHost(id, in: window) else { return false }
         hosts[id, default: [:]][window, default: 0] += 1
         return true
     }
@@ -41,6 +41,11 @@ final class ContentStore {
         guard let count = hosts[id]?[window] else { return }
         hosts[id]?[window] = count > 1 ? count - 1 : nil
         if hosts[id]?.isEmpty == true { hosts[id] = nil }
+    }
+
+    /// No window other than `window` hosts the view of `id`.
+    func canHost(_ id: ContentID, in window: WindowID) -> Bool {
+        hosts[id, default: [:]].keys.allSatisfy { $0 == window }
     }
 
     /// The windows hosting the view of `id` right now.

@@ -343,3 +343,35 @@ import SplitKitModel
         #expect(objects.allSatisfy { $0.willReleaseCalls == 1 })
     }
 }
+
+/// The single host (spec §6.4, §12) with real, unshown windows: opening a window lays out and renders its panes
+/// at once, before a source window has re-rendered and dropped its view.
+@MainActor @Suite(.serialized) struct RealWindowHostingTests {
+    @Test func detachMoveAndDockBackHandTheViewOverWithoutADoubleHost() async throws {
+        let workspace = try makePersistentWorkspace(.disabled)
+        let windows = CoordinatedWindows(workspace: workspace)
+        windows.showsWindows = false
+        workspace.windowHost = windows
+        _ = workspace.restoreOrOpenDefault()
+        let main = workspace.mainLayout.id
+        defer { windows.close(workspace.session.windows.map(\.id)) }
+
+        try await workspace.addContent(CounterContent.type, url: nil, into: nil)
+        try await workspace.addContent(CounterContent.type, besides: try #require(workspace.mainLeaves.last?.pane), edge: .right)
+        let ids = workspace.mainLeaves.compactMap(\.content)
+        func hosted(_ content: ContentID, in window: WindowID) async {
+            await waitUntil("\(content) hosted in \(window) only") { workspace.store.hostingWindows(of: content) == [window] }
+        }
+        for id in ids { await hosted(id, in: main) }
+
+        try await workspace.perform(.detach(try #require(workspace.host(of: ids[1])).pane))
+        let detached = try #require(workspace.host(of: ids[1])).window
+        await hosted(ids[1], in: detached)
+
+        try await workspace.perform(.moveToWindow(try #require(workspace.host(of: ids[0])).pane, detached))
+        await hosted(ids[0], in: detached)
+
+        try await workspace.perform(.dockBack(detached))
+        for id in ids { await hosted(id, in: main) }
+    }
+}

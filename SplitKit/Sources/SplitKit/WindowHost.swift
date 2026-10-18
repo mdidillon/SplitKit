@@ -26,6 +26,8 @@ import SplitKitWindows
 @MainActor final class CoordinatedWindows: WorkspaceWindowHost {
     private weak var workspace: SplitKitWorkspace?
     private var coordinator: WindowCoordinator?
+    /// False in tests, which place real windows without showing them (`WindowCoordinator.showsWindows`).
+    var showsWindows = true
 
     init(workspace: SplitKitWorkspace) {
         self.workspace = workspace
@@ -80,6 +82,7 @@ import SplitKitWindows
         coordinator.onCloseRequest = { [weak workspace] in workspace?.send(.closeWindow($0)) }
         coordinator.onKeyWindowChange = { [weak workspace] in workspace?.keyWindowChanged($0) }
         coordinator.dockDelegate = workspace.dragController
+        coordinator.showsWindows = showsWindows
         self.coordinator = coordinator
         return coordinator
     }
