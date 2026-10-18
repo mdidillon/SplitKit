@@ -22,7 +22,7 @@ struct SplitKitTestApp: App {
     }
 }
 
-/// Creates the workspace (colour, counter and image contents, `.splitKit` windows, the session file at its
+/// Creates the workspace (colour, counter, image and 3D model contents, `.splitKit` windows, the session file at its
 /// default location), restores it at launch, saves it at quit (at most 2 s, spec §8) and keeps the app
 /// running without windows (spec §6.3.5).
 ///
@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try registry.register(ColorContent.self)
             try registry.register(CounterContent.self)
             try ImageViewerContent.register(in: registry)
+            try ModelViewer3DContent.register(in: registry)
         } catch {
             preconditionFailure("registering the contents failed: \(error)")
         }

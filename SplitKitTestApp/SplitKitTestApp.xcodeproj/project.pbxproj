@@ -17,6 +17,7 @@
 		7206BCB0B667EFF2A88ED3EB /* DummyContents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39FBA6F1CB9A71ACBE54725 /* DummyContents.swift */; };
 		7FFCB4BBF037F61DDDABB518 /* SplitKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 6500128C679FA03AB0F6F246 /* SplitKitContent */; };
 		A5E36B91D1B5BFA9EF7F3416 /* DummyContents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39FBA6F1CB9A71ACBE54725 /* DummyContents.swift */; };
+		B1ED89442EA0437B122DCD46 /* ModelViewer3D in Frameworks */ = {isa = PBXBuildFile; productRef = 849B816E95A050DEC7B36DD7 /* ModelViewer3D */; };
 		C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */; };
 		D95E076ABE4E9AB975F60C01 /* SplitKit in Frameworks */ = {isa = PBXBuildFile; productRef = 20706E733ECCACE11053B4F6 /* SplitKit */; };
 		E62D2500643975CA5F5F3C60 /* ImageViewer in Frameworks */ = {isa = PBXBuildFile; productRef = F64D41F63B2AC9328E4101F2 /* ImageViewer */; };
@@ -55,6 +56,7 @@
 				7FFCB4BBF037F61DDDABB518 /* SplitKitContent in Frameworks */,
 				4721BD6B228B6365504B76D7 /* SplitKitModel in Frameworks */,
 				E62D2500643975CA5F5F3C60 /* ImageViewer in Frameworks */,
+				B1ED89442EA0437B122DCD46 /* ModelViewer3D in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,6 +121,7 @@
 				6500128C679FA03AB0F6F246 /* SplitKitContent */,
 				5525C76E1E2BAA562B04B75A /* SplitKitModel */,
 				F64D41F63B2AC9328E4101F2 /* ImageViewer */,
+				849B816E95A050DEC7B36DD7 /* ModelViewer3D */,
 			);
 			productName = SplitKitHostSample;
 			productReference = 61DBD1830384FCDFD9FF0BE9 /* SplitKitHostSample.app */;
@@ -459,6 +462,10 @@
 		6A45D1E6BD444D45483FD33E /* SplitKitModel */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SplitKitModel;
+		};
+		849B816E95A050DEC7B36DD7 /* ModelViewer3D */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ModelViewer3D;
 		};
 		A24058AF5722475EDA33126F /* ImageViewer */ = {
 			isa = XCSwiftPackageProductDependency;

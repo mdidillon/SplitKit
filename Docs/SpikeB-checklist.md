@@ -10,7 +10,7 @@ Spec §10 camera contract and corpus, §11 Gate B. Results: spec §11.1.
 cd Spikes/SpikeB-RealityKit
 ./scripts/fetch-corpus.sh
 swift run SpikeBDemo (or open `Spikes/SpikeB-RealityKit/SpikeBRealityKit.xcodeproj` in Xcode 27.1 and run the `SpikeBRealityKit` scheme for a real app bundle; GLTFKit2.framework is embedded)                                              # empty window, File ▸ Open… (⌘O)
-swift run SpikeBDemo Fixtures/DamagedHelmet/glTF-Binary/DamagedHelmet.glb   # opens a file directly
+swift run SpikeBDemo ../../SplitKitViews/Tests/Fixtures/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb   # opens a file directly (the corpus moved to SplitKitViews in P4b)
 ```
 
 The window shows these toolbar controls: **Open…**, a **Camera** picker (Custom / Native .orbit / .pan / .tilt / .dolly), **Reset Camera**, and **Play Animations**. Menu **Camera ▸ Reset Camera** is ⌘0. The status bar shows load time, texture slots, warnings and bounds.
@@ -57,7 +57,7 @@ For each native mode, try every contract action. Record which ones work and how.
 
 ## 4. PBR visual check vs reference
 
-Compare the live view (Custom mode, after ⌘0) and the offscreen renders (`swift run SpikeBRender` in `Spikes/SpikeB-RealityKit` writes them to `.build/renders/`) with the Khronos reference screenshots in `Spikes/SpikeB-RealityKit/Fixtures/<Model>/screenshot/`. Lighting and angle will differ. Judge the materials: correct texture placement, metal vs non-metal areas, roughness, normal-map detail, emissive glow, colours not washed out or too dark.
+Compare the live view (Custom mode, after ⌘0) and the offscreen renders (`swift run SpikeBRender` in `Spikes/SpikeB-RealityKit` writes them to `.build/renders/`) with the Khronos reference screenshots in `SplitKitViews/Tests/Fixtures/Models/<Model>/screenshot/`. Lighting and angle will differ. Judge the materials: correct texture placement, metal vs non-metal areas, roughness, normal-map detail, emissive glow, colours not washed out or too dark.
 
 | # | Model | Expected | Result | Notes |
 |---|---|---|---|---|
@@ -71,9 +71,9 @@ Compare the live view (Custom mode, after ⌘0) and the offscreen renders (`swif
 
 | # | Step | Expected | Result | Notes |
 |---|---|---|---|---|
-| 5.1 | Open `Fixtures/Errors/malformed.gltf` | An in-window message reads “Can’t open malformed.gltf” and says the file is not a valid glTF asset (1003, invalid JSON). The app keeps running. | | |
-| 5.2 | Open `Fixtures/Errors/fake.fbx` | The message reads “Unsupported file type “.fbx”. Only glTF (.gltf) and GLB (.glb) can be opened.” No crash. | | |
-| 5.3 | Open `Fixtures/Errors/missing-buffer.gltf` | The message reports I/O error 1007. No crash. | | |
+| 5.1 | Open `SplitKitViews/Tests/Fixtures/Models/Errors/malformed.gltf` | An in-window message reads “Can’t open malformed.gltf” and says the file is not a valid glTF asset (1003, invalid JSON). The app keeps running. | | |
+| 5.2 | Open `SplitKitViews/Tests/Fixtures/Models/Errors/fake.fbx` | The message reads “Unsupported file type “.fbx”. Only glTF (.gltf) and GLB (.glb) can be opened.” No crash. | | |
+| 5.3 | Open `SplitKitViews/Tests/Fixtures/Models/Errors/missing-buffer.gltf` | The message reports I/O error 1007. No crash. | | |
 | 5.4 | Open a valid model after an error | The error disappears and the model shows. | | |
 
 ## 6. Optional rows

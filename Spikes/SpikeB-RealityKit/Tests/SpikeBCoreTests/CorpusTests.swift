@@ -6,9 +6,11 @@ import SpikeBCore
 import Testing
 
 enum Fixtures {
+    /// The corpus lives in SplitKitViews/Tests/Fixtures/Models since P4b.
     static let root = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Fixtures")
+        .deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("SplitKitViews/Tests/Fixtures/Models")
 
     static func url(_ path: String) -> URL { root.appendingPathComponent(path) }
 

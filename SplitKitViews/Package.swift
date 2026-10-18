@@ -10,13 +10,19 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../SplitKit"),
-        // TODO: add GLTFKit2 (MIT) for ModelViewer3D once a version pin is decided (not in spec yet).
+        .package(url: "https://github.com/warrenm/GLTFKit2.git", exact: "0.5.15"),
     ],
     targets: [
         .target(name: "ImageViewer", dependencies: [.product(name: "SplitKitContent", package: "SplitKit")]),
-        .target(name: "ModelViewer3D", dependencies: [.product(name: "SplitKitContent", package: "SplitKit")]),
+        .target(name: "ModelViewer3D", dependencies: [
+            .product(name: "SplitKitContent", package: "SplitKit"),
+            .product(name: "GLTFKit2", package: "GLTFKit2"),
+        ]),
         .testTarget(name: "ImageViewerTests", dependencies: ["ImageViewer"]),
-        .testTarget(name: "ModelViewer3DTests", dependencies: ["ModelViewer3D"]),
+        .testTarget(name: "ModelViewer3DTests", dependencies: [
+            "ModelViewer3D",
+            .product(name: "GLTFKit2", package: "GLTFKit2"),
+        ]),
     ],
     swiftLanguageModes: [.v6]
 )

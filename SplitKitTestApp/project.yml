@@ -52,6 +52,8 @@ targets:
         product: SplitKitModel
       - package: SplitKitViews
         product: ImageViewer
+      - package: SplitKitViews
+        product: ModelViewer3D
 schemes:
   SplitKitTestApp:
     build:

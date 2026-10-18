@@ -25,7 +25,7 @@ Docs/              Specification and design references.
 ## First content views
 
 - **ImageViewer**: display only, aspect-fit. Opens from the content picker's file panel or a file dropped from Finder (`UTType.image`). Register it with `try ImageViewerContent.register(in: registry)`; depends only on `SplitKitContent`. A fresh package that depends on this one product builds and runs (CI step "Clean consumer test per product").
-- **ModelViewer3D**: glTF and GLB via GLTFKit2 and RealityKit, with standard rotate, pan and zoom.
+- **ModelViewer3D**: glTF and GLB via GLTFKit2 (pinned `exact: "0.5.15"`) and RealityKit in a `RealityView`, with a custom camera: drag orbits, ⇧-drag / middle-drag / trackpad scroll pan, wheel and pinch dolly (clamped), Reset Camera / ⌘0. Opens from the content picker's file panel or a `.gltf`/`.glb` dropped from Finder; unsupported or broken files (`.fbx`, Draco, `KHR_mesh_quantization`, malformed JSON, a missing `.bin`) are refused with a typed `ContentError`. Register it with `try ModelViewer3DContent.register(in: registry)`; depends only on `SplitKitContent` and GLTFKit2. Test models and licences: `SplitKitViews/Tests/Fixtures/Models`, `LICENSES.md`.
 
 Deferred: terminal, code editor, browser, file browser, GitHub view.
 

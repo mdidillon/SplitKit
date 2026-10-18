@@ -94,6 +94,15 @@ jobs:
           _ = viewer.makeView()
           print("OK")'
 
+          consumer_test ModelViewer3D Models/Box/glTF/Box.gltf 'import Foundation
+          import ModelViewer3D
+          import SplitKitModel
+
+          let url = URL(fileURLWithPath: CommandLine.arguments[1])
+          let viewer = try ModelViewer3DContent(id: ContentID(raw: UUID()), url: url, restoring: nil, stateVersion: nil)
+          _ = viewer.makeView()
+          print("OK")'
+
       - name: xcodebuild (SplitKitTestApp)
         run: >
           xcodebuild -project SplitKitTestApp/SplitKitTestApp.xcodeproj

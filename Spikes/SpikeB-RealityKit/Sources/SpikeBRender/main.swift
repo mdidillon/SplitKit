@@ -1,10 +1,11 @@
 // Renders the PBR corpus offscreen for the §10 side-by-side evidence.
 // Usage (from Spikes/SpikeB-RealityKit): swift run SpikeBRender [Fixtures dir] [output dir]
+// (the fixtures live in SplitKitViews/Tests/Fixtures/Models since P4b)
 import Foundation
 import SpikeBCore
 
 let arguments = CommandLine.arguments
-let fixtures = URL(fileURLWithPath: arguments.count > 1 ? arguments[1] : "Fixtures")
+let fixtures = URL(fileURLWithPath: arguments.count > 1 ? arguments[1] : "../../SplitKitViews/Tests/Fixtures/Models")
 let output = URL(fileURLWithPath: arguments.count > 2 ? arguments[2] : ".build/renders")
 try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 
