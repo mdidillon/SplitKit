@@ -56,15 +56,23 @@ struct PaneCardView: View {
     // MARK: Placeholder
 
     /// A pane whose content has no live object (spec §8). Restore is enabled once the registry has the type
-    /// (and no close is pending); it does nothing until the persistence task adds `restoreUnavailable`.
-    /// Close asks SplitKit's own confirmation (`closePane`).
+    /// (and no close is pending) and runs `restoreUnavailable`; a failed retry keeps the placeholder with the
+    /// "couldn't be restored" message. Close asks SplitKit's own confirmation (`closePane`).
     private func unavailableConfiguration(_ content: ContentID) -> EmptyPaneConfiguration {
         let isClosing = workspace.isClosing(pane: pane)
+        let typeName = workspace.typeName(of: content) ?? ""
+        let message = if case .restoreFailed = workspace.unavailableReasons[content] {
+            ChromeText.restoreFailed(typeName)
+        } else {
+            ChromeText.unavailable(typeName)
+        }
         return EmptyPaneConfiguration(
             kind: .unavailable(systemImage: workspace.metadata(of: content)?.systemImage), title: nil,
-            message: ChromeText.unavailable(workspace.typeName(of: content) ?? ""),
+            message: message,
             primaryAction: EmptyPaneConfiguration.Action(
-                title: ChromeText.restore, isEnabled: !isClosing && workspace.metadata(of: content) != nil) {},
+                title: ChromeText.restore, isEnabled: !isClosing && workspace.metadata(of: content) != nil) {
+                try? workspace.restoreUnavailable(content)
+            },
             secondaryAction: EmptyPaneConfiguration.Action(title: ChromeText.close, isEnabled: !isClosing) {
                 workspace.send(.closePane(pane))
             })

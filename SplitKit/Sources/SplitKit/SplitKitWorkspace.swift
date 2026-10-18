@@ -24,34 +24,39 @@ public final class SplitKitWorkspace {
     /// The window whose Add Content… type list (⇧⌘N) is open; runtime-only, never persisted.
     private(set) var addContentRequest: WindowID?
 
+    /// The newest failed save, or nil after a successful one; a failed save is retried at the next snapshot
+    /// point (§8).
+    public private(set) var lastSaveError: PersistenceError?
+    /// Why each placeholder is one; the pane shows it. Runtime-only.
+    private(set) var unavailableReasons: [ContentID: RestoreReport.Unavailable.Reason] = [:]
+    /// The `encodeState()` errors of the newest snapshot, per content; the content keeps its last good state.
+    private(set) var stateEncodingErrors: [ContentID: String] = [:]
+    /// The newest successfully captured state per live content (§6.5): what a snapshot falls back to when
+    /// `encodeState()` throws. Not observed: a snapshot must not re-render the views.
+    @ObservationIgnored private var capturedStates: [ContentID: (stateVersion: Int, state: Data)] = [:]
+    @ObservationIgnored private var writer: SessionWriter?
+    /// Set when the file must not be overwritten (future version, unreadable store): no snapshot is written.
+    @ObservationIgnored private var writeBlock: PersistenceError?
+    @ObservationIgnored private var autosaveTask: Task<Void, Never>?
+    @ObservationIgnored private let clock: any Clock<Duration>
+    @ObservationIgnored private let encode: SessionWriter.Encode
+
     public convenience init(registry: ContentRegistry, configuration: SplitKitConfiguration) throws(PersistenceError) {
+        if case let .file(url) = configuration.persistence, !url.isFileURL {
+            throw .unreadable(underlying: "persistence file \(url) is not a file URL")
+        }
         self.init(registry: registry, configuration: configuration, ids: SystemIDGenerator())
     }
 
-    /// Tests inject a `SeededIDGenerator`.
-    init(registry: ContentRegistry, configuration: SplitKitConfiguration, ids: some IDGenerator) {
+    /// Tests inject a `SeededIDGenerator`, a clock for the autosave debounce and a failing encoder.
+    init(registry: ContentRegistry, configuration: SplitKitConfiguration, ids: some IDGenerator,
+         clock: any Clock<Duration> = ContinuousClock(),
+         encode: @escaping SessionWriter.Encode = { try Migrator.encode($0) }) {
         self.registry = registry
         self.configuration = configuration
         self.ids = ids
-    }
-
-    /// Persistence is a later Phase 2 task: for now this always opens the default layout, one `.main`
-    /// window in its empty state (`root == nil`, §6.1.6), and reports `.persistenceDisabled` or `.noFile`.
-    /// Live objects of a previous session are released.
-    public func restoreOrOpenDefault() -> RestoreReport {
-        for record in session.contents { store.release(record.id) }
-        session = Session()
-        runtime = WorkspaceRuntime()
-        addContentRequest = nil
-        do {
-            try commit(.openMainWindow(WindowID(raw: ids.next()), placement: .defaultMainWindow))
-        } catch {
-            preconditionFailure("openMainWindow failed on an empty session: \(error)")
-        }
-        switch configuration.persistence {
-        case .disabled: return RestoreReport(source: .persistenceDisabled)
-        case .file, .custom: return RestoreReport(source: .noFile)
-        }
+        self.clock = clock
+        self.encode = encode
     }
 
     public func perform(_ command: SplitKitCommand) async throws(LayoutError) {
@@ -225,16 +230,20 @@ public final class SplitKitWorkspace {
     @discardableResult
     func commit(_ transaction: LayoutTransaction) throws(LayoutError) -> TransactionResult {
         let result = try apply(transaction)
-        commit(result)
+        commit(result, isSnapshotPoint: transaction.changesSession)
         return result
     }
 
     /// Commits a successful result, then runs its side effects: the views re-host from the new session,
     /// then released contents get `willRelease()` and are dropped (§6.2, §6.3.2).
-    private func commit(_ result: TransactionResult) {
+    private func commit(_ result: TransactionResult, isSnapshotPoint: Bool = true) {
         session = result.session
         runtime = result.runtime
-        for id in result.released { store.release(id) }
+        for id in result.released {
+            store.release(id)
+            unavailableReasons[id] = nil
+        }
+        if isSnapshotPoint { scheduleAutosave() }
     }
 
     // MARK: Two-stage close (§6.3)
@@ -294,5 +303,261 @@ public final class SplitKitWorkspace {
         closePrompts.removeFirst()
         closePrompt = closePrompts.first?.prompt
         first.answer.resume(returning: confirmed)
+    }
+}
+
+// MARK: Persistence (§8)
+
+extension LayoutTransaction {
+    /// False for the transactions that change only runtime state (stage 1 and cancel of a close, §6.3):
+    /// a pending close is saved as open, so these are no snapshot points.
+    var changesSession: Bool {
+        switch self {
+        case .beginClose, .cancelClose, .beginCloseWindow, .cancelCloseWindow: false
+        default: true
+        }
+    }
+}
+
+extension SplitKitWorkspace {
+    /// Restores the saved session, or opens the default layout (one `.main` window in its empty state,
+    /// `root == nil`, §6.1.6) when persistence is disabled, there is no file, or the file can't be used.
+    /// Live objects of a previous session are released.
+    ///
+    /// Reads a `.file` synchronously. A `.custom` store loads asynchronously (`SessionStore.load` is
+    /// `async`), so here it opens the default layout and blocks writes; use `restoreOrOpenDefaultAsync()`
+    /// (deviation candidate: §5 declares only this synchronous form).
+    public func restoreOrOpenDefault() -> RestoreReport {
+        switch configuration.persistence {
+        case .disabled:
+            resetForRestore()
+            openDefaultLayout()
+            return RestoreReport(source: .persistenceDisabled)
+        case let .file(url):
+            let store = FileSessionStore(url: url)
+            return restore(Result { try store.loadSynchronously() }, from: store)
+        case .custom:
+            resetForRestore()
+            openDefaultLayout()
+            let error = PersistenceError.unreadable(underlying: "a custom SessionStore loads asynchronously: call restoreOrOpenDefaultAsync()")
+            writeBlock = error
+            return RestoreReport(source: .defaultAfterError(error))
+        }
+    }
+
+    /// `restoreOrOpenDefault()` for every `persistence` mode, awaiting `SessionStore.load()`.
+    public func restoreOrOpenDefaultAsync() async -> RestoreReport {
+        switch configuration.persistence {
+        case .disabled, .file: return restoreOrOpenDefault()
+        case let .custom(store):
+            let loaded: Result<Data?, any Error>
+            do { loaded = .success(try await store.load()) } catch { loaded = .failure(error) }
+            return restore(loaded, from: store)
+        }
+    }
+
+    /// Restores the content of a placeholder: creates its object from the retained record (type, state version
+    /// and state, verbatim) and marks the record `.hosted`. Throws `RegistryError.unknownType` while the type
+    /// isn't registered, and `.creationFailed` when `init(restoring:)` throws again, which keeps the
+    /// placeholder and the record (retry later). An unknown ID throws `.creationFailed` with an empty type.
+    public func restoreUnavailable(_ id: ContentID) throws(RegistryError) {
+        guard let index = session.contents.firstIndex(where: { $0.id == id }) else {
+            throw .creationFailed(ContentType(raw: ""), .other("no content \(id)"))
+        }
+        guard store[id] == nil else { return }
+        let record = session.contents[index]
+        let object: any PaneContent
+        do {
+            object = try makeObject(for: record)
+        } catch {
+            if case .creationFailed = error { unavailableReasons[id] = .restoreFailed(String(describing: error)) }
+            throw error
+        }
+        store.insert(object, for: id)
+        capture(record)
+        session.contents[index].availability = .hosted
+        unavailableReasons[id] = nil
+        scheduleAutosave()
+    }
+
+    /// Writes a snapshot now and returns when it is written (§5). Throws what the write failed with, or the
+    /// reason the file must not be overwritten (e.g. `unsupportedFutureVersion`). Does nothing for `.disabled`.
+    public func saveNow() async throws(PersistenceError) {
+        if let writeBlock { throw writeBlock }
+        guard let writer else { return }
+        autosaveTask?.cancel()
+        autosaveTask = nil
+        writer.enqueue(snapshot())
+        await writer.idle()
+        if let lastSaveError { throw lastSaveError }
+    }
+
+    /// For `applicationShouldTerminate` and a closing window: `saveNow()`, but returns after `timeout` (§8: 2 s)
+    /// even if the store hasn't finished. Errors stay in `lastSaveError`.
+    public func saveBeforeQuit(timeout: Duration = .seconds(2)) async {
+        let (finished, signal) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let save = Task { try? await saveNow(); signal.yield() }
+        let timer = Task { [clock] in try? await clock.sleep(for: timeout); signal.yield() }
+        for await _ in finished { break }
+        timer.cancel()
+        _ = save
+    }
+
+    /// Returns when no autosave is waiting and no write is in flight. For tests.
+    func settleAutosave() async {
+        while let task = autosaveTask { await task.value }
+        await writer?.idle()
+    }
+
+    // MARK: Restore pipeline
+
+    private func resetForRestore() {
+        autosaveTask?.cancel()
+        autosaveTask = nil
+        writer = nil
+        writeBlock = nil
+        lastSaveError = nil
+        for record in session.contents { store.release(record.id) }
+        session = Session()
+        runtime = WorkspaceRuntime()
+        addContentRequest = nil
+        unavailableReasons = [:]
+        stateEncodingErrors = [:]
+        capturedStates = [:]
+    }
+
+    private func openDefaultLayout() {
+        do {
+            try commit(.openMainWindow(WindowID(raw: ids.next()), placement: .defaultMainWindow))
+        } catch {
+            preconditionFailure("openMainWindow failed on an empty session: \(error)")
+        }
+    }
+
+    /// Both layers of §8 validation, then the live objects; a fatal file opens the default layout.
+    private func restore(_ loaded: Result<Data?, any Error>, from store: any SessionStore) -> RestoreReport {
+        resetForRestore()
+        var report: RestoreReport
+        var needsSnapshot = false
+        switch loaded {
+        case let .failure(error):
+            // Whatever is there couldn't be read: never write over it.
+            let failure = PersistenceError.unreadable(underlying: "load failed: \(error)")
+            openDefaultLayout()
+            writeBlock = failure
+            report = RestoreReport(source: .defaultAfterError(failure))
+        case .success(nil):
+            openDefaultLayout()
+            report = RestoreReport(source: .noFile)
+        case let .success(data?):
+            do {
+                let decoded = try Migrator.decode(data)
+                (report, needsSnapshot) = adopt(decoded.0, normalizations: decoded.1)
+            } catch {
+                openDefaultLayout()
+                report = RestoreReport(source: .defaultAfterError(error))
+                if case .unsupportedFutureVersion = error {
+                    writeBlock = error               // a newer app's file is never overwritten
+                } else if let kept = try? (store as? FileSessionStore)?.keepInvalid(data) {
+                    report.keptInvalidFile = kept
+                    needsSnapshot = true             // the default layout replaces the unusable file
+                } else {
+                    writeBlock = error               // no copy was kept: leave the original alone
+                }
+            }
+        }
+        writer = SessionWriter(store: store, encode: encode) { [weak self] in self?.lastSaveError = $0 }
+        if needsSnapshot { scheduleAutosave() }
+        return report
+    }
+
+    /// The SplitKit layer of validation (§8): marks `.hosted` records of unregistered types `.unavailable`,
+    /// restores `.unavailable` records of registered types, and creates the live objects. Returns whether
+    /// anything changed that a snapshot has to save (§6.5).
+    private func adopt(_ decoded: Session, normalizations: [Normalization]) -> (RestoreReport, needsSnapshot: Bool) {
+        var restored = decoded
+        var report = RestoreReport(source: .restoredFile, normalizations: normalizations)
+        var needsSnapshot = !normalizations.isEmpty
+        for index in restored.contents.indices {
+            let record = restored.contents[index]
+            let wasUnavailable = record.availability == .unavailable
+            func keepUnavailable(_ reason: RestoreReport.Unavailable.Reason) {
+                if !wasUnavailable { needsSnapshot = true }
+                restored.contents[index].availability = .unavailable
+                unavailableReasons[record.id] = reason
+                report.unavailable.append(.init(id: record.id, type: record.type, reason: reason))
+            }
+            guard registry.metadata(for: record.type) != nil else {
+                keepUnavailable(.typeNotRegistered)
+                continue
+            }
+            do {
+                store.insert(try makeObject(for: record), for: record.id)
+            } catch {
+                keepUnavailable(.restoreFailed(String(describing: error)))
+                continue
+            }
+            capture(record)
+            if wasUnavailable {
+                restored.contents[index].availability = .hosted
+                report.autoRestored.append(record.id)
+                needsSnapshot = true
+            }
+        }
+        session = restored
+        return (report, needsSnapshot)
+    }
+
+    /// The object of `record`, restored from its state; an empty state is "not captured yet" (§6.5).
+    private func makeObject(for record: ContentRecord) throws(RegistryError) -> any PaneContent {
+        let hasState = !record.state.isEmpty
+        return try registry.make(record.type, id: record.id, url: nil,
+                                 state: hasState ? record.state : nil, stateVersion: hasState ? record.stateVersion : nil)
+    }
+
+    /// Seeds the last good state of a restored content with the record's own.
+    private func capture(_ record: ContentRecord) {
+        if !record.state.isEmpty { capturedStates[record.id] = (record.stateVersion, record.state) }
+    }
+
+    // MARK: Snapshots
+
+    /// A consistent snapshot (§8): the session and every live content's `encodeState()` in one pass on the main
+    /// actor. `.hosted` records get the new `state` and `stateVersion`; a content whose `encodeState()` throws
+    /// keeps its last good state and the error lands in `stateEncodingErrors`; `.unavailable` records and
+    /// records without an object are written back verbatim (§6.5). Pending closes are runtime-only, so they
+    /// are saved as open.
+    func snapshot() -> Session {
+        var snapshot = session
+        stateEncodingErrors = [:]
+        for index in snapshot.contents.indices {
+            let record = snapshot.contents[index]
+            guard record.availability == .hosted, let object = store[record.id] else { continue }
+            do {
+                capturedStates[record.id] = (type(of: object).stateVersion, try object.encodeState())
+            } catch {
+                stateEncodingErrors[record.id] = String(describing: error)
+            }
+            if let captured = capturedStates[record.id] {
+                snapshot.contents[index].stateVersion = captured.stateVersion
+                snapshot.contents[index].state = captured.state
+            }
+        }
+        let live = Set(snapshot.contents.map(\.id))
+        capturedStates = capturedStates.filter { live.contains($0.key) }
+        return snapshot
+    }
+
+    /// A snapshot point (§8): the snapshot is taken and written `autosaveDebounce` after the newest one.
+    func scheduleAutosave() {
+        guard writer != nil, writeBlock == nil else { return }
+        autosaveTask?.cancel()
+        let delay = configuration.autosaveDebounce
+        autosaveTask = Task { [weak self, clock] in
+            do { try await clock.sleep(for: delay) } catch { return }
+            guard !Task.isCancelled, let self else { return }
+            autosaveTask = nil
+            writer?.enqueue(snapshot())
+        }
     }
 }

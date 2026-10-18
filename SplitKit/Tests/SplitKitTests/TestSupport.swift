@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 import SwiftUI
 import Testing
 import SplitKitContent
@@ -93,6 +94,185 @@ final class FailingContent: PaneContent {
     func encodeState() throws -> Data { Data() }
     func shouldClose() async -> Bool { true }
     func willRelease() {}
+}
+
+/// A content with real state (a count, JSON-encoded) whose `encodeState()` can be made to throw.
+@MainActor @Observable
+final class CounterContent: PaneContent {
+    static let type = ContentType(raw: "test.counter")
+    static let displayName = "Counter"
+    static let systemImage = "number"
+    static let minimumSize = CGSize.zero
+    static let stateVersion = 3
+
+    struct State: Codable, Equatable { var count: Int }
+
+    let id: ContentID
+    var count = 0
+    var failsEncoding = false
+    /// What `init(restoring:)` was given; `nil` when the content was created new.
+    let restoredStateVersion: Int?
+
+    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+        self.id = id
+        restoredStateVersion = stateVersion
+        guard let state else { return }
+        do {
+            count = try JSONDecoder().decode(State.self, from: state).count
+        } catch {
+            throw .stateIncompatible(version: stateVersion ?? 0)
+        }
+    }
+
+    var title: String { "Counter" }
+    var toolbarItems: [PaneToolbarItem] { [] }
+    func makeView() -> AnyView { AnyView(Color.clear) }
+    func encodeState() throws -> Data {
+        if failsEncoding { throw ContentError.other("encodeState fails") }
+        return try JSONEncoder().encode(State(count: count))
+    }
+    func shouldClose() async -> Bool { true }
+    func willRelease() {}
+
+    static func state(_ count: Int) -> Data { try! JSONEncoder().encode(State(count: count)) }
+}
+
+/// A content whose `init(restoring:)` throws while `failing` is set. Only one test uses it.
+@MainActor @Observable
+final class FlakyRestoreContent: PaneContent {
+    static let type = ContentType(raw: "test.flaky")
+    static let displayName = "Flaky"
+    static let systemImage = "bolt"
+    static let minimumSize = CGSize.zero
+    static let stateVersion = 1
+    static var failing = false
+
+    init(id: ContentID, restoring state: Data?, stateVersion: Int?) throws(ContentError) {
+        if Self.failing { throw .other("flaky restore") }
+    }
+
+    var title: String { "Flaky" }
+    var toolbarItems: [PaneToolbarItem] { [] }
+    func makeView() -> AnyView { AnyView(Color.clear) }
+    func encodeState() throws -> Data { Data() }
+    func shouldClose() async -> Bool { true }
+    func willRelease() {}
+}
+
+/// An in-memory `SessionStore` that records its saves and can fail or block them.
+final class MemoryStore: SessionStore, @unchecked Sendable {
+    struct Failure: Error {}
+    private struct State {
+        var data: Data?
+        var saved: [Data] = []
+        var failuresPending = 0
+        var loadFails = false
+        var blocking = false
+        var waiters: [CheckedContinuation<Void, Never>] = []
+        var started = 0, current = 0, peak = 0
+    }
+    private let state: OSAllocatedUnfairLock<State>
+
+    init(data: Data? = nil) { state = OSAllocatedUnfairLock(initialState: State(data: data)) }
+
+    var data: Data? { state.withLock { $0.data } }
+    /// Every successful save, oldest first.
+    var saved: [Data] { state.withLock { $0.saved } }
+    var started: Int { state.withLock { $0.started } }
+    /// The most saves that were ever running at once.
+    var peak: Int { state.withLock { $0.peak } }
+
+    func failSaves(_ count: Int = .max) { state.withLock { $0.failuresPending = count } }
+    func failLoad() { state.withLock { $0.loadFails = true } }
+    /// Saves wait in `save` until `release()`.
+    func block() { state.withLock { $0.blocking = true } }
+    func release() {
+        let waiters = state.withLock { state in
+            state.blocking = false
+            defer { state.waiters = [] }
+            return state.waiters
+        }
+        for waiter in waiters { waiter.resume() }
+    }
+
+    func load() async throws -> Data? {
+        if state.withLock({ $0.loadFails }) { throw Failure() }
+        return data
+    }
+
+    func save(_ data: Data) async throws {
+        let blocking = state.withLock { state in
+            state.started += 1
+            state.current += 1
+            state.peak = max(state.peak, state.current)
+            return state.blocking
+        }
+        if blocking {
+            await withCheckedContinuation { continuation in
+                let resumeNow = state.withLock { state in
+                    if state.blocking { state.waiters.append(continuation) }
+                    return !state.blocking
+                }
+                if resumeNow { continuation.resume() }
+            }
+        }
+        let failed = state.withLock { state in
+            state.current -= 1
+            if state.failuresPending > 0 {
+                state.failuresPending -= 1
+                return true
+            }
+            state.data = data
+            state.saved.append(data)
+            return false
+        }
+        if failed { throw Failure() }
+    }
+}
+
+/// Runs `body` with a fresh temporary directory and deletes it afterwards.
+nonisolated(nonsending) func withTemporaryDirectory<T>(_ body: (URL) async throws -> T) async throws -> T {
+    let directory = FileManager.default.temporaryDirectory.appending(path: "SplitKitTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    return try await body(directory)
+}
+
+/// Polls `condition` every 5 ms until it holds; records an issue after `timeout`.
+@MainActor
+func waitUntil(_ comment: String, timeout: Duration = .seconds(5), _ condition: @MainActor () -> Bool) async {
+    let deadline = ContinuousClock.now + timeout
+    while !condition() {
+        if ContinuousClock.now > deadline {
+            Issue.record("timed out waiting for \(comment)")
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+}
+
+/// A workspace over `persistence` that has not restored yet; its registry has `TestContent`, `CounterContent`
+/// and the `extra` types. Autosave is debounced at `debounce`.
+@MainActor
+func makePersistentWorkspace(_ persistence: SplitKitConfiguration.Persistence, seed: UInt64 = 0x5EED,
+                             debounce: Duration = .milliseconds(10), types: [any PaneContent.Type] = [CounterContent.self],
+                             encode: @escaping SessionWriter.Encode = { try Migrator.encode($0) }) throws -> SplitKitWorkspace {
+    let registry = ContentRegistry()
+    try registry.register(TestContent.self)
+    for type in types { try registry.register(type) }
+    return SplitKitWorkspace(registry: registry, configuration: SplitKitConfiguration(persistence: persistence, autosaveDebounce: debounce),
+                             ids: SeededIDGenerator(seed: seed), encode: encode)
+}
+
+/// A one-window session with one pane hosting a record of `type`, and its encoded bytes.
+func sessionFile(type: String, state: Data = Data([1, 2, 3]), stateVersion: Int = 7,
+                 availability: ContentRecord.Availability = .unavailable) throws -> (session: Session, bytes: Data, content: ContentID) {
+    let content = ContentID(raw: UUID())
+    let window = WindowLayout(id: WindowID(raw: UUID()), kind: .main, root: .pane(id: PaneID(raw: UUID()), content: content),
+                              placement: .defaultMainWindow)
+    let session = Session(windows: [window], contents: [ContentRecord(id: content, type: ContentType(raw: type), stateVersion: stateVersion,
+                                                                       state: state, availability: availability)])
+    return (session, try Migrator.encode(session), content)
 }
 
 extension SeededIDGenerator {

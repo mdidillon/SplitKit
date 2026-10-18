@@ -90,6 +90,9 @@ enum ChromeText {
     /// The unavailable placeholder's message (spec §8).
     static func unavailable(_ typeName: String) -> String { "\(typeName) isn't available in this app" }
 
+    /// The placeholder's message when the type is registered but `init(restoring:)` threw (spec §8).
+    static func restoreFailed(_ typeName: String) -> String { "\(typeName) couldn't be restored" }
+
     /// The window close prompt (spec §7.5).
     static func closeWindowTitle(panes: Int) -> String { "Close window with \(panes) panes?" }
     static let closeWindowMessage = "The content of every pane in this window will be closed."
