@@ -158,6 +158,49 @@ private let windowFrame = CGRect(x: 100, y: 100, width: 400, height: 300)
         #expect(delegate.points.isEmpty && delegate.hovers.isEmpty && delegate.performed.isEmpty)
     }
 
+    @Test func theHostOverlayIsTheSameDestinationAndOnlyTakesPartInHitTestingDuringAPaneDrag() {
+        let delegate = Delegate()
+        let overlay = DockDropContainerView(overlayFor: WindowID(raw: UUID()))
+        overlay.delegate = delegate
+        overlay.frame = CGRect(x: 0, y: 0, width: 200, height: 100)
+        #expect(overlay.isOverlay && overlay.registeredDraggedTypes == [.splitKitPane] && overlay.isFlipped)
+        let info = FakeDraggingInfo(payload: payload, location: CGPoint(x: 30, y: 20))
+        #expect(overlay.draggingEntered(info) == .move && overlay.performDragOperation(info))
+        #expect(delegate.performed == [delegate.target!])
+
+        // No drag in flight (the real drag pasteboard holds no pane payload here): clicks pass through.
+        #expect(overlay.hitTest(CGPoint(x: 10, y: 10)) == nil)
+        #expect(container(delegate).isOverlay == false)
+    }
+
+    @Test(arguments: [
+        (NSEvent.EventType.leftMouseDragged, true, true), (nil, true, true),
+        (.leftMouseDown, true, false), (.mouseMoved, true, false), (.scrollWheel, true, false),
+        (.leftMouseDragged, false, false), (nil, false, false),
+    ] as [(NSEvent.EventType?, Bool, Bool)])
+    func aPaneDragIsInFlightOnlyForADragEventWithAPanePayload(event: NSEvent.EventType?, hasPayload: Bool, expected: Bool) {
+        let types: [NSPasteboard.PasteboardType] = hasPayload ? [.string, .splitKitPane] : [.string]
+        #expect(DockDropContainerView.isPaneDragInFlight(event: event, pasteboardTypes: types) == expected)
+        #expect(!DockDropContainerView.isPaneDragInFlight(event: .leftMouseDragged, pasteboardTypes: nil))
+    }
+
+    @Test func theDestinationOfAWindowIsItsContentViewOrTheOverlayInsideHostContent() {
+        let delegate = Delegate()
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 200, height: 100), styleMask: [.titled], backing: .buffered, defer: true)
+        window.isReleasedWhenClosed = false
+        #expect(DockDropContainerView.destination(in: window) == nil && DockDropContainerView.destination(in: nil) == nil)
+        let overlay = DockDropContainerView(overlayFor: WindowID(raw: UUID()))
+        let hostContent = NSView(frame: CGRect(x: 0, y: 0, width: 200, height: 100))
+        let nested = NSView()
+        hostContent.addSubview(nested)
+        nested.addSubview(overlay)
+        window.contentView = hostContent
+        #expect(DockDropContainerView.destination(in: window) === overlay)
+        let owned = container(delegate)
+        window.contentView = owned
+        #expect(DockDropContainerView.destination(in: window) === owned)
+    }
+
     @Test func aDropPerformsOntoTheTargetAndReturnsTheDelegatesAnswer() {
         let delegate = Delegate()
         let view = container(delegate)

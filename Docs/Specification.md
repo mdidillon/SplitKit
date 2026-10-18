@@ -697,6 +697,12 @@ Decided 18 Oct 2026. Q1 and Q2 by Marc; the rest by Grok Bot on Marc's instructi
 4. New `Docs/Design.md` values (marked [check]): drop-zone centre fraction 0.5 per side, ghost opacity 0.6.
 5. In `.host` mode a host-owned main window becomes a drop destination through `SplitKitView` (P3c); until then Move to Window docks into it.
 
+**P3c interpretations (decided by Grok Bot; item 1, an additive public API, is approved under Marc's 18 Oct instruction):**
+1. `SplitKitWorkspace.mainWindow` is public (§5 gives a host no other way to learn the `WindowID` it passes to `SplitKitView`).
+2. A host-owned main window is a drop destination via a transparent `DockDropContainerView` overlay that `SplitKitView` adds in `.host` mode (main windows only; SplitKit-created detached windows already have the container as content view). The overlay takes part in hit testing only while a pane drag is in flight, so the host's own events are untouched; no frame, content view or delegate of a host window is changed. The ghost snapshot of a pane dragged out of a host window is blank.
+3. The host sample is the `SplitKitHostSample` scheme in `SplitKitTestApp.xcodeproj`, built by CI; the simulated-display matrix runs a real `WindowCoordinator` over injected displays (windows placed, never shown).
+4. Known gaps accepted: the ghost image of a pane dragged out of a host-owned window is blank, and the host's own red close button has no SplitKit behaviour (the host owns that window).
+
 **Approved P2 deviations:**
 1. `SplitKitCommand` declared (§5 only names it).
 2. `ShortcutMap` declared.

@@ -55,7 +55,7 @@ package struct PaneDragStart: Equatable {
               DragOut.exceedsStartThreshold(from: start, to: event.locationInWindow) else { return }
         mouseDown = nil
         guard let pane, let delegate, let start = delegate.paneDragBegin(pane: pane) else { return }
-        let container = window?.contentView as? DockDropContainerView
+        let container = DockDropContainerView.destination(in: window)
         let card = container?.snapshot(of: start.card)
         let headerImage = container?.snapshot(of: start.header)
         delegate.paneDragStarted(card: card, mouse: container?.convert(event.locationInWindow, from: nil) ?? .zero)

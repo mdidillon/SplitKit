@@ -37,6 +37,8 @@ Deferred: terminal, code editor, browser, file browser, GitHub view.
 
 The test app shows the split UI with two dummy contents (Colour and Counter) and saves its session to `~/Library/Application Support/com.mdidillon.SplitKitTestApp/SplitKit/session.json`. Pass the launch argument `-SplitKitPersistenceDisabled YES` to start from the default layout without reading or writing it, and `-SplitKitPlainStyle YES` to show `.plain` instead of `.glass`. Building and launching from Terminal, and the manual checks: `Docs/SplitUI-checklist.md`.
 
+**Host sample.** The `SplitKitHostSample` scheme (same project) shows `.host` mode: the app owns its main window and embeds `SplitKitView(workspace:window:)`, persistence is `.disabled`, and SplitKit creates only the detached windows. Build and launch commands: `Docs/SplitUI-checklist.md`, check 34.
+
 To use SplitKit in your own app, add the `SplitKit` package (and any `SplitKitViews` products you need) through Swift Package Manager. Create a `ContentRegistry`, register your contents, and create a `SplitKitWorkspace`. Then either let SplitKit manage windows, or embed `SplitKitView` in your own. See spec §5 (API) and §9 (window ownership).
 
 ## Licence

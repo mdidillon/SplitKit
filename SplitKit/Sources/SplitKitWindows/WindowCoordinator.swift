@@ -94,8 +94,18 @@ import SplitKitModel
         entries[id] = Entry(window: window, ownsFrame: hostWindow == nil, placement: placement,
                             writeBack: PlacementWriteBack(displays: displays()))
         place(id)
-        window.makeKeyAndOrderFront(nil)
+        if showsWindows { window.makeKeyAndOrderFront(nil) }
     }
+
+    /// False in tests, which place windows without showing them.
+    package var showsWindows = true
+
+    /// The placement the coordinator holds for `id`: the intended frame the user last chose, never changed
+    /// by a display change.
+    package func placement(of id: WindowID) -> SavedPlacement? { entries[id]?.placement }
+
+    /// The window `id`, for tests that read its frame or send it delegate callbacks.
+    package func window(of id: WindowID) -> NSWindow? { entries[id]?.window }
 
     /// Closes the window `id` without asking (the close was committed already). Unknown IDs are ignored.
     package func close(_ id: WindowID) {
@@ -138,7 +148,9 @@ import SplitKitModel
         isApplyingFrame = false
     }
 
-    private func displaysDidChange() {
+    /// The displays changed (the screen-parameters notification): every window is resolved again from its
+    /// saved placement. Package-visible so tests can drive it with injected displays.
+    package func displaysDidChange() {
         for id in entries.keys { place(id) }
     }
 

@@ -11,6 +11,11 @@
 		1DA76C6FB67F8BFEBB8C1FB1 /* ImageViewer in Frameworks */ = {isa = PBXBuildFile; productRef = A24058AF5722475EDA33126F /* ImageViewer */; };
 		2AD4934BF3779F6470DEEAF4 /* GlassVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */; };
 		3CF74568A6277F14AFD63E93 /* SplitKitModel in Frameworks */ = {isa = PBXBuildFile; productRef = 6A45D1E6BD444D45483FD33E /* SplitKitModel */; };
+		4721BD6B228B6365504B76D7 /* SplitKitModel in Frameworks */ = {isa = PBXBuildFile; productRef = 5525C76E1E2BAA562B04B75A /* SplitKitModel */; };
+		65D76510A13555F98184CCF5 /* SplitKit in Frameworks */ = {isa = PBXBuildFile; productRef = EFD4B2B2A22A4BDCD879DE2D /* SplitKit */; };
+		6B2C9FC34A80BAFE71131E68 /* HostSampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 756206E71118E595AAF59F84 /* HostSampleApp.swift */; };
+		7206BCB0B667EFF2A88ED3EB /* DummyContents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39FBA6F1CB9A71ACBE54725 /* DummyContents.swift */; };
+		7FFCB4BBF037F61DDDABB518 /* SplitKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 6500128C679FA03AB0F6F246 /* SplitKitContent */; };
 		A5E36B91D1B5BFA9EF7F3416 /* DummyContents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39FBA6F1CB9A71ACBE54725 /* DummyContents.swift */; };
 		C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */; };
 		D95E076ABE4E9AB975F60C01 /* SplitKit in Frameworks */ = {isa = PBXBuildFile; productRef = 20706E733ECCACE11053B4F6 /* SplitKit */; };
@@ -20,6 +25,8 @@
 /* Begin PBXFileReference section */
 		3E17408EF3A72B7FDA664E7A /* SplitKitTestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SplitKitTestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		424B9E53FEE71C3F98C8ECF0 /* SplitKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SplitKit; path = ../SplitKit; sourceTree = SOURCE_ROOT; };
+		61DBD1830384FCDFD9FF0BE9 /* SplitKitHostSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SplitKitHostSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		756206E71118E595AAF59F84 /* HostSampleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostSampleApp.swift; sourceTree = "<group>"; };
 		908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitKitTestApp.swift; sourceTree = "<group>"; };
 		ACAD58BEE9578365B50CB9D0 /* SplitKitViews */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SplitKitViews; path = ../SplitKitViews; sourceTree = SOURCE_ROOT; };
 		B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassVerificationView.swift; sourceTree = "<group>"; };
@@ -39,6 +46,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C2E84FAB6B7F275814F6DF52 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				65D76510A13555F98184CCF5 /* SplitKit in Frameworks */,
+				7FFCB4BBF037F61DDDABB518 /* SplitKitContent in Frameworks */,
+				4721BD6B228B6365504B76D7 /* SplitKitModel in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -47,6 +64,7 @@
 			children = (
 				D39FBA6F1CB9A71ACBE54725 /* DummyContents.swift */,
 				B9C7DCBD3A5C6DFA54C83E2C /* GlassVerificationView.swift */,
+				756206E71118E595AAF59F84 /* HostSampleApp.swift */,
 				908AB7792BCBB3B660496991 /* SplitKitTestApp.swift */,
 			);
 			path = Sources;
@@ -55,6 +73,7 @@
 		696B98330494B79C154E631A /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				61DBD1830384FCDFD9FF0BE9 /* SplitKitHostSample.app */,
 				3E17408EF3A72B7FDA664E7A /* SplitKitTestApp.app */,
 			);
 			name = Products;
@@ -81,6 +100,27 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A6E11378D310CD9EBDD60771 /* SplitKitHostSample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D2D9F62361962954A76E6A72 /* Build configuration list for PBXNativeTarget "SplitKitHostSample" */;
+			buildPhases = (
+				8C5A91E04AE7DE31DA91BD84 /* Sources */,
+				C2E84FAB6B7F275814F6DF52 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SplitKitHostSample;
+			packageProductDependencies = (
+				EFD4B2B2A22A4BDCD879DE2D /* SplitKit */,
+				6500128C679FA03AB0F6F246 /* SplitKitContent */,
+				5525C76E1E2BAA562B04B75A /* SplitKitModel */,
+			);
+			productName = SplitKitHostSample;
+			productReference = 61DBD1830384FCDFD9FF0BE9 /* SplitKitHostSample.app */;
+			productType = "com.apple.product-type.application";
+		};
 		F173F0815D8FD55F923BFDE6 /* SplitKitTestApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DCBF393373F18AD41C059F37 /* Build configuration list for PBXNativeTarget "SplitKitTestApp" */;
@@ -113,6 +153,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					A6E11378D310CD9EBDD60771 = {
+						ProvisioningStyle = Manual;
+					};
 					F173F0815D8FD55F923BFDE6 = {
 						ProvisioningStyle = Manual;
 					};
@@ -137,6 +180,7 @@
 			projectRoot = "";
 			targets = (
 				F173F0815D8FD55F923BFDE6 /* SplitKitTestApp */,
+				A6E11378D310CD9EBDD60771 /* SplitKitHostSample */,
 			);
 		};
 /* End PBXProject section */
@@ -149,6 +193,15 @@
 				A5E36B91D1B5BFA9EF7F3416 /* DummyContents.swift in Sources */,
 				2AD4934BF3779F6470DEEAF4 /* GlassVerificationView.swift in Sources */,
 				C3A92A98DCC0B8DEDE3E8D87 /* SplitKitTestApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8C5A91E04AE7DE31DA91BD84 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7206BCB0B667EFF2A88ED3EB /* DummyContents.swift in Sources */,
+				6B2C9FC34A80BAFE71131E68 /* HostSampleApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -228,6 +281,20 @@
 			};
 			name = Release;
 		};
+		958827785296134B8F1091AC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mdidillon.SplitKitHostSample;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		A693B409005F1F1F94F977FE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -295,6 +362,20 @@
 			};
 			name = Debug;
 		};
+		C87FE083DA4FA319FE5F46EA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mdidillon.SplitKitHostSample;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
 		E3B9C9593031CD0A67E96CAD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -316,6 +397,15 @@
 			buildConfigurations = (
 				A693B409005F1F1F94F977FE /* Debug */,
 				3C1C668F4206C1511D90207F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D2D9F62361962954A76E6A72 /* Build configuration list for PBXNativeTarget "SplitKitHostSample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C87FE083DA4FA319FE5F46EA /* Debug */,
+				958827785296134B8F1091AC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -355,6 +445,14 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ModelViewer3D;
 		};
+		5525C76E1E2BAA562B04B75A /* SplitKitModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SplitKitModel;
+		};
+		6500128C679FA03AB0F6F246 /* SplitKitContent */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SplitKitContent;
+		};
 		6A45D1E6BD444D45483FD33E /* SplitKitModel */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SplitKitModel;
@@ -362,6 +460,10 @@
 		A24058AF5722475EDA33126F /* ImageViewer */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ImageViewer;
+		};
+		EFD4B2B2A22A4BDCD879DE2D /* SplitKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SplitKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

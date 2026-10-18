@@ -62,3 +62,8 @@ jobs:
         run: >
           xcodebuild -project SplitKitTestApp/SplitKitTestApp.xcodeproj
           -scheme SplitKitTestApp build CODE_SIGNING_ALLOWED=NO
+
+      - name: xcodebuild (SplitKitHostSample)
+        run: >
+          xcodebuild -project SplitKitTestApp/SplitKitTestApp.xcodeproj
+          -scheme SplitKitHostSample build CODE_SIGNING_ALLOWED=NO

@@ -274,7 +274,9 @@ public final class SplitKitWorkspace {
         session.windows.first { $0.id == id }
     }
 
-    var mainWindow: WindowID? {
+    /// The `.main` window, nil while there is none: what a `.host` mode host passes to `SplitKitView`.
+    /// (Deviation candidate: §5 does not list it.)
+    public var mainWindow: WindowID? {
         session.windows.first { $0.kind == .main }?.id
     }
 

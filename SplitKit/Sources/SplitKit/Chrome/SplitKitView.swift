@@ -36,6 +36,9 @@ public struct SplitKitView: View {
                 }
             }
         }
+        .overlay {
+            if HostDropDestination.isNeeded(by: workspace, window: window) { HostDropDestination(workspace: workspace, window: window) }
+        }
         .closePrompt(of: workspace, in: window)
         .contentPicker(workspace.contentPicker(for: workspace.addContentTarget(in: window)), in: workspace,
                        isPresented: Binding(get: { workspace.addContentRequest == window },

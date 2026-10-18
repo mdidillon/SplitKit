@@ -22,6 +22,20 @@ private let userPlacement = SavedPlacement(intendedFrame: CGRect(x: 40, y: 60, w
         #expect(hosted.windowHost is CoordinatedWindows)
     }
 
+    @Test func onlyAHostOwnedMainWindowGetsTheDropDestinationFromSplitKitView() async throws {
+        let hosted = try SplitKitWorkspace(registry: .init(), configuration: SplitKitConfiguration(
+            windowManagement: .host(makeDetachedWindow: nil), persistence: .disabled))
+        hosted.windowHost = RecordingWindowHost()
+        _ = hosted.restoreOrOpenDefault()
+        #expect(HostDropDestination.isNeeded(by: hosted, window: hosted.mainLayout.id))
+        #expect(!HostDropDestination.isNeeded(by: hosted, window: WindowID(raw: UUID())), "not in the session")
+
+        let managed = try SplitKitWorkspace(registry: .init(), configuration: SplitKitConfiguration(persistence: .disabled))
+        managed.windowHost = RecordingWindowHost()
+        _ = managed.restoreOrOpenDefault()
+        #expect(!HostDropDestination.isNeeded(by: managed, window: managed.mainLayout.id), "the coordinator's container is the destination")
+    }
+
     @Test func theWindowContentHookWrapsEveryWindowAndNilLeavesItAlone() throws {
         var wrapped = 0
         let hooked = try SplitKitWorkspace(registry: .init(), configuration: SplitKitConfiguration(

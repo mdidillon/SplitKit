@@ -19,7 +19,9 @@ targets:
   SplitKitTestApp:
     type: application
     platform: macOS
-    sources: [Sources]
+    sources:
+      - path: Sources
+        excludes: [HostSampleApp.swift]
     dependencies:
       - package: SplitKit
         product: SplitKit
@@ -31,10 +33,33 @@ targets:
         product: ImageViewer
       - package: SplitKitViews
         product: ModelViewer3D
+  # Host mode (spec §9): the host owns its main window and embeds SplitKitView. Shares the dummy contents.
+  SplitKitHostSample:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+        includes: [HostSampleApp.swift, DummyContents.swift]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mdidillon.SplitKitHostSample
+    dependencies:
+      - package: SplitKit
+        product: SplitKit
+      - package: SplitKit
+        product: SplitKitContent
+      - package: SplitKit
+        product: SplitKitModel
 schemes:
   SplitKitTestApp:
     build:
       targets:
         SplitKitTestApp: all
+    run:
+      config: Debug
+  SplitKitHostSample:
+    build:
+      targets:
+        SplitKitHostSample: all
     run:
       config: Debug

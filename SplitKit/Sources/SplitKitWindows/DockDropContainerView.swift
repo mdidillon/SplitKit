@@ -22,8 +22,12 @@ import SplitKitModel
     package let windowID: WindowID
     package weak var delegate: (any DockTargetDelegate)?
 
+    /// True for the destination a `.host` window gets on top of its own content (`init(overlayFor:)`).
+    package let isOverlay: Bool
+
     package init(windowID: WindowID, content: NSView) {
         self.windowID = windowID
+        isOverlay = false
         super.init(frame: content.frame)
         content.frame = bounds
         content.autoresizingMask = [.width, .height]
@@ -31,10 +35,43 @@ import SplitKitModel
         registerForDraggedTypes([.splitKitPane])
     }
 
+    /// The drop destination of a window the host owns (§9 `.host`): a transparent view laid over the host's
+    /// content, which SplitKit cannot wrap. It takes part in hit testing only while a pane drag is under the
+    /// cursor, so clicks, scrolls and hovers reach the host's views as before.
+    package init(overlayFor windowID: WindowID) {
+        self.windowID = windowID
+        isOverlay = true
+        super.init(frame: .zero)
+        registerForDraggedTypes([.splitKitPane])
+    }
+
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
 
     /// Top-left origin, like SwiftUI, so a window point needs no flipping.
     override package var isFlipped: Bool { true }
+
+    /// Whether a pane drag is in flight: the dragging pasteboard holds a pane payload and the event being
+    /// handled is a drag (the pasteboard keeps its payload after the drop, so it alone is not enough).
+    package static func isPaneDragInFlight(event: NSEvent.EventType?, pasteboardTypes: [NSPasteboard.PasteboardType]?) -> Bool {
+        (event == .leftMouseDragged || event == nil) && pasteboardTypes?.contains(.splitKitPane) == true
+    }
+
+    override package func hitTest(_ point: NSPoint) -> NSView? {
+        guard isOverlay else { return super.hitTest(point) }
+        let drag = Self.isPaneDragInFlight(event: NSApp.currentEvent?.type, pasteboardTypes: NSPasteboard(name: .drag).types)
+        return drag ? super.hitTest(point) : nil
+    }
+
+    /// The drop destination of `window`: its content view (`.splitKit` windows) or the overlay inside the
+    /// host's content (`.host` windows).
+    package static func destination(in window: NSWindow?) -> DockDropContainerView? {
+        func search(_ view: NSView) -> DockDropContainerView? {
+            if let container = view as? DockDropContainerView { return container }
+            for subview in view.subviews { if let found = search(subview) { return found } }
+            return nil
+        }
+        return window?.contentView.flatMap(search)
+    }
 
     /// An image of `rect` (content space) as drawn now; nil for an empty rect or when the view has no bitmap.
     package func snapshot(of rect: CGRect) -> NSImage? {
