@@ -43,6 +43,8 @@ Values every style needs but that are not public tokens. They live in **one inte
 | Active indicator thickness | 2 pt **[check]** | Accent line along the top edge of the active pane's header (§7) |
 | Drop overlay fill opacity | 0.18 **[check]** | `colors.dropHighlight` fill over the target zone |
 | Drop overlay stroke | 2 pt **[check]** | `colors.dropHighlight` stroke around the target zone |
+| Drop zone centre fraction | 0.5 **[check]** | Share of the card's width and height, centred, that is the swap zone (centre); the rest is split along the card's diagonals into the four edge halves (spec §9) |
+| Ghost window opacity | 0.6 **[check]** | Alpha of the borderless snapshot window that follows the cursor while a header is dragged beyond `undockThreshold` outside every window (spec §9) |
 | Inactive chrome opacity | none: inactive uses `.secondary` foreground, not opacity | Inactive header |
 | Dragged-source opacity | 0.5 **[check]** | Header and content of the pane being dragged |
 | Empty-state symbol size | 28 pt **[check]** | Symbol in the empty pane and empty window |
@@ -182,7 +184,7 @@ Checked on the Phase 2 example screen and the first chrome build, in light and d
 3. Header padding 6 pt and item spacing 4 pt
 4. Active indicator: 2 pt accent line on top of the header
 5. Drop overlay: 0.18 fill, 2 pt stroke, `.thinMaterial` in `.glass`
-6. Dragged-source opacity 0.5
+6. Dragged-source opacity 0.5, drop zone centre fraction 0.5, ghost window opacity 0.6
 7. `.glass` divider: line only on hover and drag
 8. `.glass` window background: standard, no custom window material
 9. Empty state: 28 pt symbol, `.title3` title, 8 pt spacing, `.glassProminent` Add button

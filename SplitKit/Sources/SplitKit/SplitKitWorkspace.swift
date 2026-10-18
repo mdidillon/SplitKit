@@ -51,6 +51,14 @@ public final class SplitKitWorkspace {
     /// The coordinator window that is key; runtime-only. The menu bar acts in it when no `SplitKitView`
     /// publishes its window as the focused scene value.
     private(set) var keyWindow: WindowID?
+    /// The pane whose header is being dragged, and the drop the cursor is over (§9); runtime-only. They drive
+    /// the dragged-source look and the drop overlay. `dragController` is the only writer.
+    var draggedPane: PaneID?
+    var dockTarget: DockTarget?
+    /// The pane cells each window's view laid out last, with the tokens it used: what a drop is hit-tested against.
+    @ObservationIgnored var paneCells: [WindowID: PaneCells] = [:]
+    /// Runs header drags: begin, hit-testing, drop, ghost and the single cleanup (§9).
+    @ObservationIgnored private(set) var dragController: PaneDragController!
 
     public convenience init(registry: ContentRegistry, configuration: SplitKitConfiguration) throws(PersistenceError) {
         if case let .file(url) = configuration.persistence, !url.isFileURL {
@@ -69,6 +77,7 @@ public final class SplitKitWorkspace {
         self.ids = ids
         self.clock = clock
         self.encode = encode
+        self.dragController = PaneDragController(workspace: self)
     }
 
     public func perform(_ command: SplitKitCommand) async throws(LayoutError) {
@@ -76,7 +85,7 @@ public final class SplitKitWorkspace {
         case let .split(pane, edge):
             try commit(.insert(nil, at: pane, edge: edge, in: window(containing: pane)))
         case let .move(content, pane, edge):
-            try commit(.move(content, to: pane, edge: edge, in: window(containing: pane)))
+            try move(content, to: pane, edge: edge)
         case let .reorder(split, from, to):
             try commit(.reorder(splitID: split, from: from, to: to))
         case let .resize(split, fractions):
@@ -328,6 +337,18 @@ public final class SplitKitWorkspace {
         windowHost?.close(result.windowsClosed)
         guard isSnapshotPoint else { return }
         if result.windowsClosed.isEmpty { scheduleAutosave() } else { enqueueSnapshot() }
+    }
+
+    /// The `.move` command (§6.2): an edge move or, with `.center`, a swap; `pane` may be in another window.
+    /// Synchronous, so a drop (which must answer AppKit at once) runs the same code as `perform(.move)`.
+    func move(_ content: ContentID, to pane: PaneID, edge: DropEdge) throws(LayoutError) {
+        try commit(.move(content, to: pane, edge: edge, in: window(containing: pane)))
+    }
+
+    /// Marks a header drag as running in the runtime (§5 `WorkspaceRuntime.activeDrag`); nil when it ends.
+    /// Not a layout change: no snapshot, no autosave.
+    func setActiveDrag(_ drag: DragSessionID?) {
+        runtime.activeDrag = drag
     }
 
     // MARK: Windows (§9)

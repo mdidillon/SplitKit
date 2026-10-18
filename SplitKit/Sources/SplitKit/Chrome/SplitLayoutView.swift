@@ -33,8 +33,17 @@ struct SplitLayoutView: View {
                         .frame(width: divider.hitArea.width, height: divider.hitArea.height)
                         .position(x: divider.hitArea.midX, y: divider.hitArea.midY)
                 }
+                if case let .pane(pane, zone) = workspace.dockTarget,
+                   let cell = layout.panes.first(where: { $0.pane == pane }) {
+                    DropOverlayView(zone: zone, card: SplitGeometry.card(of: cell.frame, contentPadding: tokens.metrics.contentPadding))
+                }
             }
             .frame(width: bounds.width, height: bounds.height)
+            .onChange(of: PaneCells(cells: layout.panes, contentPadding: tokens.metrics.contentPadding,
+                                    headerHeight: tokens.metrics.headerHeight), initial: true) { _, cells in
+                workspace.paneCells[window.id] = cells
+            }
+            .onDisappear { workspace.paneCells[window.id] = nil }
         }
     }
 

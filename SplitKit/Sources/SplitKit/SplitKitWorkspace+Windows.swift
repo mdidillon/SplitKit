@@ -14,15 +14,20 @@ extension SplitKitWorkspace {
 
     /// Pane ▸ Detach: the pane's content goes into a new detached window, placed like its source window
     /// offset by 24 pt and resolved against the displays (`DetachPlacement`). Does nothing when detaching is
-    /// `.disabled`. An empty pane throws `unknownContent`.
-    func detach(_ pane: PaneID) throws(LayoutError) {
+    /// `.disabled`. An empty pane throws `unknownContent`. With `frame` (a dragged-out ghost dropped, §9) the
+    /// window appears there, resolved against the displays, instead of offset from its source.
+    func detach(_ pane: PaneID, at frame: CGRect? = nil) throws(LayoutError) {
         guard configuration.detach != .disabled else { return }
         let window = try window(containing: pane)
         let source = windowLayout(window)
         let content = source?.root?.leaves.first { $0.pane == pane }?.content
         let minimum = paneMinimum(content, tokens: EnvironmentValues().splitKitTokens)
-        let placement = DetachPlacement.placement(from: source?.placement.intendedFrame ?? .zero,
-                                                  contentMinSize: minimum, displays: displays())
+        let placement = if let frame {
+            DetachPlacement.placement(at: frame, contentMinSize: minimum, displays: displays())
+        } else {
+            DetachPlacement.placement(from: source?.placement.intendedFrame ?? .zero,
+                                      contentMinSize: minimum, displays: displays())
+        }
         try commit(.detach(pane, to: WindowID(raw: ids.next()), placement: placement))
     }
 

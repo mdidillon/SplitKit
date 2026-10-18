@@ -368,6 +368,21 @@ func makeWorkspace(seed: UInt64 = 0x5EED, persistence: SplitKitConfiguration.Per
 }
 
 extension SplitKitWorkspace {
+    /// Registers the pane cells `window`'s split view would lay out in `size` with the `.glass` tokens, so a
+    /// drop can be hit-tested without a rendered window (what `SplitLayoutView` does on appear).
+    @discardableResult
+    func registerPaneCells(of window: WindowID, size: CGSize = CGSize(width: 800, height: 600)) -> PaneCells {
+        let tokens = SplitKitTokens.glass
+        let cells = PaneCells(
+            cells: windowLayout(window)?.root.map {
+                SplitGeometry.layout($0, in: CGRect(origin: .zero, size: size), dividerHitWidth: tokens.metrics.dividerHitWidth,
+                                     paneMinimum: { self.paneMinimum($0, tokens: tokens) }).panes
+            } ?? [],
+            contentPadding: tokens.metrics.contentPadding, headerHeight: tokens.metrics.headerHeight)
+        paneCells[window] = cells
+        return cells
+    }
+
     /// The main window's layout.
     var mainLayout: WindowLayout { windowLayout(mainWindow!)! }
     /// The main window's panes with their contents, in tree order.

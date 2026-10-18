@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     .paneHeaderStyle(.plain)
                     .paneDividerStyle(.plain)
                     .emptyPaneStyle(.plain)
+                    .dropOverlayStyle(.plain)
                     .splitKitTokens(.plain))
             }
         }

@@ -79,6 +79,7 @@ import SplitKitWindows
         coordinator.onUserPlacementChange = { [weak workspace] in workspace?.userPlaced($0, $1) }
         coordinator.onCloseRequest = { [weak workspace] in workspace?.send(.closeWindow($0)) }
         coordinator.onKeyWindowChange = { [weak workspace] in workspace?.keyWindowChanged($0) }
+        coordinator.dockDelegate = workspace.dragController
         self.coordinator = coordinator
         return coordinator
     }

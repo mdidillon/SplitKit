@@ -690,6 +690,13 @@ Decided 18 Oct 2026. Q1 and Q2 by Marc; the rest by Grok Bot on Marc's instructi
 5. In `.host` mode SplitKit's window layer opens detached windows only; for a `makeDetachedWindow` window it sets the content view and delegate (replacing the host's delegate) and never its frame.
 6. Dock Back stays available with `Detach.disabled`; *Dock Back Instead* appears on the window prompt, which exists only for N ≥ 2 (§7.5); a single-content detached window closes through that content's `shouldClose()`.
 
+**P3b interpretations (decided by Grok Bot):**
+1. The drag source is a `metrics.headerHeight` square over the header's drag handle, not the whole header.
+2. The ghost and the window created from it are card-sized plus the title bar, keeping the cursor's grab offset; a ghost drop resolves at the drop location (no 24 pt offset).
+3. Esc vs release-outside is distinguished by a key-down monitor (AppKit reports both as no operation).
+4. New `Docs/Design.md` values (marked [check]): drop-zone centre fraction 0.5 per side, ghost opacity 0.6.
+5. In `.host` mode a host-owned main window becomes a drop destination through `SplitKitView` (P3c); until then Move to Window docks into it.
+
 **Approved P2 deviations:**
 1. `SplitKitCommand` declared (§5 only names it).
 2. `ShortcutMap` declared.

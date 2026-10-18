@@ -29,6 +29,13 @@ public struct SplitKitView: View {
                 }
             }
         }
+        .overlay {
+            if workspace.dockTarget == .emptyWindow(window) {
+                GeometryReader { proxy in
+                    DropOverlayView(zone: .center, card: CGRect(origin: .zero, size: proxy.size))
+                }
+            }
+        }
         .closePrompt(of: workspace, in: window)
         .contentPicker(workspace.contentPicker(for: workspace.addContentTarget(in: window)), in: workspace,
                        isPresented: Binding(get: { workspace.addContentRequest == window },

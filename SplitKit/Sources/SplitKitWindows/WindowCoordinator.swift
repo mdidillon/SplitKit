@@ -24,6 +24,11 @@ import SplitKitModel
     /// The coordinator window that became key, or nil when one stopped being key.
     package var onKeyWindowChange: (@MainActor (WindowID?) -> Void)?
 
+    /// The owner of pane drops (§9): every window's content view is a drop destination that asks it.
+    package weak var dockDelegate: (any DockTargetDelegate)? {
+        didSet { for entry in entries.values { (entry.window.contentView as? DockDropContainerView)?.delegate = dockDelegate } }
+    }
+
     static let styleMask: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .resizable]
 
     private struct Entry {
@@ -81,7 +86,9 @@ import SplitKitModel
             window.tabbingMode = .disallowed
             window.title = ProcessInfo.processInfo.processName
         }
-        window.contentView = makeContentView(id)
+        let container = DockDropContainerView(windowID: id, content: makeContentView(id))
+        container.delegate = dockDelegate
+        window.contentView = container
         window.contentMinSize = contentMinSize
         window.delegate = self
         entries[id] = Entry(window: window, ownsFrame: hostWindow == nil, placement: placement,

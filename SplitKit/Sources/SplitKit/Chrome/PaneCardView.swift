@@ -19,6 +19,7 @@ struct PaneCardView: View {
             header
             contentBody
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .draggedSourceOpacity(workspace.draggedPane == pane)
         }
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: tokens.metrics.cornerRadius, style: .continuous))
@@ -40,8 +41,7 @@ struct PaneCardView: View {
     }
 
     private func activate() {
-        guard window.activePane != pane else { return }
-        workspace.send(.setActive(pane, in: window.id))
+        workspace.activate(pane)
     }
 
     // MARK: Header
@@ -51,6 +51,11 @@ struct PaneCardView: View {
         let configuration = workspace.headerConfiguration(for: pane, in: window, content: content)
         return headerStyle.makeBody(configuration: configuration)
             .contextMenu { configuration.menu }
+            .overlay(alignment: .leading) {
+                PaneDragHandle(workspace: workspace, pane: pane)
+                    .frame(width: tokens.metrics.headerHeight, height: tokens.metrics.headerHeight)
+                    .allowsHitTesting(!configuration.isPendingClose)
+            }
     }
 
     // MARK: Placeholder

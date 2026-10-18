@@ -224,3 +224,35 @@ enum SplitGeometry {
         axis == .horizontal ? size.width : size.height
     }
 }
+
+// MARK: Drop zones (§9)
+
+extension SplitGeometry {
+    /// The card drawn inside a layout cell: the cell inset by `contentPadding` (Docs/Design.md §2).
+    static func card(of cell: CGRect, contentPadding: CGFloat) -> CGRect {
+        cell.insetBy(dx: contentPadding, dy: contentPadding)
+    }
+
+    /// The drop zone under `point` in a card (§9): the centre rectangle (`centreFraction` of each side) is a
+    /// swap; outside it the card is cut along its diagonals into the four edge halves. A point outside the
+    /// card (the gap between cards) takes the nearest side, so the zones tile the whole cell.
+    static func dropZone(at point: CGPoint, in card: CGRect, centreFraction: CGFloat) -> DropEdge {
+        guard card.width > 0, card.height > 0 else { return .center }
+        let dx = (point.x - card.midX) / card.width, dy = (point.y - card.midY) / card.height
+        let half = centreFraction / 2
+        if abs(dx) <= half, abs(dy) <= half { return .center }
+        if abs(dx) > abs(dy) { return dx < 0 ? .left : .right }
+        return dy < 0 ? .top : .bottom
+    }
+
+    /// The part of `card` that `zone` highlights (Docs/Design.md §7): the whole card for the centre, else that half.
+    static func dropRect(for zone: DropEdge, in card: CGRect) -> CGRect {
+        switch zone {
+        case .center: card
+        case .left: CGRect(x: card.minX, y: card.minY, width: card.width / 2, height: card.height)
+        case .right: CGRect(x: card.midX, y: card.minY, width: card.width / 2, height: card.height)
+        case .top: CGRect(x: card.minX, y: card.minY, width: card.width, height: card.height / 2)
+        case .bottom: CGRect(x: card.minX, y: card.midY, width: card.width, height: card.height / 2)
+        }
+    }
+}

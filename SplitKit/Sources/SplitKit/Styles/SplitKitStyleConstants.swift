@@ -14,6 +14,8 @@ enum SplitKitStyleConstants {
     static let dropOverlayFillOpacity: Double = 0.18
     static let dropOverlayStroke: CGFloat = 2
     static let draggedSourceOpacity: Double = 0.5
+    static let dropZoneCentreFraction: CGFloat = 0.5
+    static let ghostOpacity: Double = 0.6
     static let emptyStateSymbolSize: CGFloat = 28
     static let emptyStateSpacing: CGFloat = 8
     static let animation: Animation = .smooth

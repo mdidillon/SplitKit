@@ -11,10 +11,14 @@ package enum DetachPlacement {
     /// `contentMinSize` (turned into a frame minimum by the title bar of the coordinator's windows), and written
     /// back with `DisplayPlacement.placement(writing:displays:)`, so it is exactly the frame the window gets.
     @MainActor package static func placement(from source: CGRect, contentMinSize: CGSize, displays: [DisplaySnapshot]) -> SavedPlacement {
-        let moved = source.offsetBy(dx: offset, dy: -offset)
+        placement(at: source.offsetBy(dx: offset, dy: -offset), contentMinSize: contentMinSize, displays: displays)
+    }
+
+    /// The same resolution for a window that is to appear exactly at `frame` (a ghost dropped there, §9).
+    @MainActor package static func placement(at frame: CGRect, contentMinSize: CGSize, displays: [DisplaySnapshot]) -> SavedPlacement {
         let minimum = NSWindow.frameRect(forContentRect: CGRect(origin: .zero, size: contentMinSize),
                                          styleMask: WindowCoordinator.styleMask).size
-        let resolved = DisplayPlacement.resolve(DisplayPlacement.placement(writing: moved, displays: displays),
+        let resolved = DisplayPlacement.resolve(DisplayPlacement.placement(writing: frame, displays: displays),
                                                 minSize: minimum, displays: displays)
         return DisplayPlacement.placement(writing: resolved, displays: displays)
     }

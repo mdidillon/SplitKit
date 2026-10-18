@@ -14,6 +14,8 @@ extension SplitKitWorkspace {
             systemImage: content == nil ? nil : metadata?.systemImage,
             showsFocusToggle: configuration.focusModeEnabled,
             isActive: isActive,
+            isDropTarget: isDropTarget(pane),
+            isDraggedSource: draggedPane == pane,
             isPendingClose: isClosing(pane: pane),
             isEmpty: content == nil,
             isFocusMode: window.focusModePane == pane,
@@ -24,6 +26,11 @@ extension SplitKitWorkspace {
             },
             toggleFocusMode: { [self] in send(.toggleFocusMode(pane)) },
             close: { [self] in send(.closePane(pane)) })
+    }
+
+    /// The pane is the target of the drag that is running (§9).
+    private func isDropTarget(_ pane: PaneID) -> Bool {
+        if case .pane(pane, _) = dockTarget { true } else { false }
     }
 
     /// The content's title; "Add Content" for an empty pane (spec §7.1); the type name for a placeholder.

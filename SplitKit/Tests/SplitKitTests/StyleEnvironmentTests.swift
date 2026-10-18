@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Testing
+import SplitKitModel
 @testable import SplitKit
 
 /// Tokens and styles reach the view hierarchy through the environment (default `.glass`, override `.plain`),
@@ -14,12 +15,15 @@ import Testing
         #expect(environment.paneHeaderStyle.style is GlassPaneHeaderStyle)
         #expect(environment.paneDividerStyle.style is GlassPaneDividerStyle)
         #expect(environment.emptyPaneStyle.style is GlassEmptyPaneStyle)
+        #expect(environment.dropOverlayStyle.style is GlassDropOverlayStyle)
     }
 
     @Test func plainOverridesEveryStyleAndTheTokens() throws {
         let environment = try capturedEnvironment {
             $0.splitKitTokens(.plain).paneHeaderStyle(.plain).paneDividerStyle(.plain).emptyPaneStyle(.plain)
+                .dropOverlayStyle(.plain)
         }
+        #expect(environment.dropOverlayStyle.style is PlainDropOverlayStyle)
         #expect(environment.splitKitTokens == .plain)
         #expect(environment.paneHeaderStyle.style is PlainPaneHeaderStyle)
         #expect(environment.paneDividerStyle.style is PlainPaneDividerStyle)
@@ -42,10 +46,35 @@ import Testing
         #expect(environment.paneHeaderStyle.style is GlassPaneHeaderStyle)
         #expect(environment.paneDividerStyle.style is PlainPaneDividerStyle)
         #expect(environment.emptyPaneStyle.style is GlassEmptyPaneStyle)
+        #expect(environment.dropOverlayStyle.style is GlassDropOverlayStyle)
         #expect(environment.splitKitTokens == .glass)
     }
 
     // MARK: Rendering
+
+    @Test(arguments: [BuiltInLook.glass, .plain])
+    func dropOverlayRendersEveryZone(_ look: BuiltInLook) {
+        let tokens = look == .glass ? SplitKitTokens.glass : .plain
+        for zone in [DropEdge.left, .right, .top, .bottom, .center] {
+            let configuration = DropOverlayConfiguration(zone: zone, cornerRadius: tokens.metrics.cornerRadius)
+            host(BuiltInDropOverlay(configuration: configuration, look: look).splitKitTokens(tokens))
+        }
+    }
+
+    @Test func dropOverlayConfigurationRoundsOnlyTheOuterCornersOfAnEdgeHalf() {
+        let radius = SplitKitTokens.glass.metrics.cornerRadius
+        func radii(_ zone: DropEdge) -> RectangleCornerRadii { DropOverlayConfiguration(zone: zone, cornerRadius: radius).shape.cornerRadii }
+        #expect(radii(.center) == .init(topLeading: radius, bottomLeading: radius, bottomTrailing: radius, topTrailing: radius))
+        #expect(radii(.left) == .init(topLeading: radius, bottomLeading: radius, bottomTrailing: 0, topTrailing: 0))
+        #expect(radii(.right) == .init(topLeading: 0, bottomLeading: 0, bottomTrailing: radius, topTrailing: radius))
+        #expect(radii(.top) == .init(topLeading: radius, bottomLeading: 0, bottomTrailing: 0, topTrailing: radius))
+        #expect(radii(.bottom) == .init(topLeading: 0, bottomLeading: radius, bottomTrailing: radius, topTrailing: 0))
+    }
+
+    @Test func environmentDropOverlayRendersThroughTheTypeEraser() throws {
+        let environment = try capturedEnvironment { $0.dropOverlayStyle(.plain) }
+        host(environment.dropOverlayStyle.makeBody(configuration: DropOverlayConfiguration(zone: .left, cornerRadius: 0)))
+    }
 
     @Test(arguments: [BuiltInLook.glass, .plain])
     func headerRendersEveryStateAtTheTokenHeight(_ look: BuiltInLook) {
